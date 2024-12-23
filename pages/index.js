@@ -5,7 +5,7 @@ export default function Home() {
     <main>
       <section className={styles.hero}>
         <div className={styles.overlay}>
-          <h1 className={styles.title}>Your Name</h1>
+          <h1 className={styles.title}>Ee Mun</h1>
           <p className={styles.subtitle}>Frontend Developer | UI/UX Enthusiast | React Specialist</p>
         </div>
       </section>
