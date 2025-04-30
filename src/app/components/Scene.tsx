@@ -312,6 +312,7 @@ const Scene = () => {
       // Add box outline
       const boxHelper = new THREE.BoxHelper(model, 0x00ff00);
       boxHelper.name = 'houseBox';
+      boxHelper.visible = false;//outter Box
       scene.add(boxHelper);
       houseBoxRef.current = boxHelper;
 
@@ -344,6 +345,7 @@ const Scene = () => {
       centerBox.position.z = -20;
       centerBox.position.x = -18;
       centerBox.name = 'centerBox';
+      centerBox.visible = false; //Inner Box : centerBox; Outter Box ： boxHelper
       scene.add(centerBox);
 
       // Load poodle after house is loaded
