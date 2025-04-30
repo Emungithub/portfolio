@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import Chatbot, { ChatbotHandle } from './Chatbot';
 
 const Scene = () => {
   const mountRef = useRef<HTMLDivElement>(null);
@@ -18,6 +19,14 @@ const Scene = () => {
   const desktopModelRef = useRef<THREE.Object3D | null>(null);
   const bedModelRef = useRef<THREE.Object3D | null>(null);
   const chairModelRef = useRef<THREE.Object3D | null>(null);
+  const robotModelRef = useRef<THREE.Object3D | null>(null);
+  const robotMixerRef = useRef<THREE.AnimationMixer | null>(null);
+  const robotScreenRef = useRef<THREE.Mesh | null>(null);
+  const robotBorderPlaneRef = useRef<THREE.Mesh | null>(null);
+  const robotBorderRef = useRef<THREE.LineSegments | null>(null);
+  const [showRobotScreen, setShowRobotScreen] = useState(false);
+  const chatbotRef = useRef<ChatbotHandle>(null);
+  const [isCameraLockedToChat, setIsCameraLockedToChat] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -49,52 +58,114 @@ const Scene = () => {
 
     // Handle mouse click
     const handleClick = (event: MouseEvent) => {
-      if (!houseModelRef.current) return;
-
-      // Calculate mouse position in normalized device coordinates
       mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
       mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-      // Update the picking ray with the camera and mouse position
       raycaster.setFromCamera(mouse, camera);
-
-      // Calculate objects intersecting the picking ray
       const intersects = raycaster.intersectObjects(scene.children, true);
 
-      // Check if a project image was clicked
-      for (const intersect of intersects) {
-        if (intersect.object.userData && intersect.object.userData.url) {
-          window.open(intersect.object.userData.url, '_blank');
-          return;
-        }
-      }
-
-      // Check if house was clicked
-      const houseClicked = intersects.some(intersect => {
+      const robotClicked = intersects.some(intersect => {
         let obj = intersect.object;
         while (obj.parent) {
-          if (obj.name === 'house') return true;
+          if (obj.name === 'robot') return true;
           obj = obj.parent;
         }
-        return obj.name === 'house';
+        return obj.name === 'robot';
       });
 
-      if (houseClicked) {
-        // Get the house's position in world space
-        const housePosition = new THREE.Vector3();
-        houseModelRef.current.getWorldPosition(housePosition);
-        
-        // Project the 3D position to screen coordinates
-        const screenPosition = housePosition.clone().project(camera);
-        
-        // Convert to pixel coordinates
-        const x = (screenPosition.x * 0.5 + 0.5) * window.innerWidth;
-        const y = -(screenPosition.y * 0.5 - 0.5) * window.innerHeight;
-        
-        setButtonPosition({ x, y });
-        setShowButton(true);
-      } else {
-        setShowButton(false);
+      if (robotClicked) {
+        const newShowRobotScreen = !showRobotScreen;
+        setShowRobotScreen(newShowRobotScreen);
+        setIsCameraLockedToChat(newShowRobotScreen);
+
+        if (newShowRobotScreen && robotScreenRef.current) {
+          const screenPosition = robotScreenRef.current.position.clone();
+          const cameraOffset = new THREE.Vector3(-20, 5, 20);
+          const targetCameraPos = screenPosition.clone().add(cameraOffset);
+          
+          // Smoothly move camera to new position
+          const startPos = camera.position.clone();
+          const startRot = camera.rotation.clone();
+          
+          // Look at the center of the screen
+          const endRot = new THREE.Euler();
+          camera.position.copy(targetCameraPos);
+          camera.lookAt(screenPosition);
+          endRot.copy(camera.rotation);
+          camera.position.copy(startPos);
+          camera.rotation.copy(startRot);
+
+          // Animate camera movement
+          const duration = 1000;
+          const startTime = Date.now();
+          
+          const animateCamera = () => {
+            const now = Date.now();
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            const ease = (t: number) => t * t * (3 - 2 * t);
+            const t = ease(progress);
+            
+            camera.position.lerpVectors(startPos, targetCameraPos, t);
+            camera.rotation.x = startRot.x + (endRot.x - startRot.x) * t;
+            camera.rotation.y = startRot.y + (endRot.y - startRot.y) * t;
+            camera.rotation.z = startRot.z + (endRot.z - startRot.z) * t;
+            
+            if (progress < 1) {
+              requestAnimationFrame(animateCamera);
+            }
+          };
+          
+          animateCamera();
+          
+          // Update controls
+          controls.target.copy(screenPosition);
+          controls.minDistance = 30;
+          controls.maxDistance = 50;
+          controls.update();
+        } else {
+          // Reset camera to default position when closing chatbot
+          const defaultCameraPos = new THREE.Vector3(15, 50, 250);
+          const defaultLookAt = new THREE.Vector3(0, 0, 150);
+          
+          const startPos = camera.position.clone();
+          const startRot = camera.rotation.clone();
+          
+          camera.position.copy(defaultCameraPos);
+          camera.lookAt(defaultLookAt);
+          const endRot = camera.rotation.clone();
+          camera.position.copy(startPos);
+          camera.rotation.copy(startRot);
+          
+          const duration = 1000;
+          const startTime = Date.now();
+          
+          const animateCamera = () => {
+            const now = Date.now();
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            const ease = (t: number) => t * t * (3 - 2 * t);
+            const t = ease(progress);
+            
+            camera.position.lerpVectors(startPos, defaultCameraPos, t);
+            camera.rotation.x = startRot.x + (endRot.x - startRot.x) * t;
+            camera.rotation.y = startRot.y + (endRot.y - startRot.y) * t;
+            camera.rotation.z = startRot.z + (endRot.z - startRot.z) * t;
+            
+            if (progress < 1) {
+              requestAnimationFrame(animateCamera);
+            }
+          };
+          
+          animateCamera();
+          
+          // Reset controls
+          controls.target.copy(defaultLookAt);
+          controls.minDistance = 0;
+          controls.maxDistance = Infinity;
+          controls.update();
+        }
       }
     };
 
@@ -377,27 +448,48 @@ const Scene = () => {
       gltfLoader.load('/house/robot.glb', (gltf2) => {
         const bedModel = gltf2.scene;
         bedModel.name = 'robot';
-        bedModel.scale.set(15, 15, 15); // Adjust scale as needed
+        bedModel.scale.set(10, 10, 10); // Adjust scale as needed
         bedModel.position.set(53, 1, -50); // Position near the house
         bedModel.rotateY(-Math.PI / 4); // Rotate 45 degrees around Y axis
         scene.add(bedModel);
         bedModelRef.current = bedModel;
       });
-    //   gltfLoader.load('/house/projectTitle.glb', (gltf2) => {
-    //     const bedModel = gltf2.scene;
-    //     bedModel.name = 'projectTitle';
-    //     bedModel.scale.set(15, 15, 15); // Adjust scale as needed
-    //     bedModel.position.set(53, 60, -50); // Position near the house
-    //     bedModel.rotateY(-Math.PI / 4); // Rotate 45 degrees around Y axis
-    //     scene.add(bedModel);
-    //     bedModelRef.current = bedModel;
-    //   });
+
+      gltfLoader.load('/house/showcase.glb', (gltf2) => {
+        const bedModel = gltf2.scene;
+        bedModel.name = 'projectTitle';
+        bedModel.scale.set(15, 15, 15); // Adjust scale as needed
+        bedModel.position.set(53, 60, -50); // Position near the house
+        bedModel.rotateY(-Math.PI / 4); // Rotate 45 degrees around Y axis
+        scene.add(bedModel);
+        bedModelRef.current = bedModel;
+      });
+
+      gltfLoader.load('/house/start.glb', (gltf2) => {
+        const bedModel = gltf2.scene;
+        bedModel.name = 'projectTitle';
+        bedModel.scale.set(5, 5, 5); // Adjust scale as needed
+        bedModel.position.set(37, 60, -66); // Position near the house
+        bedModel.rotateY(-Math.PI / 4); // Rotate 45 degrees around Y axis
+        scene.add(bedModel);
+        bedModelRef.current = bedModel;
+      });
+
+      gltfLoader.load('/house/pause.glb', (gltf2) => {
+        const bedModel = gltf2.scene;
+        bedModel.name = 'projectTitle';
+        bedModel.scale.set(5, 5, 5); // Adjust scale as needed
+        bedModel.position.set(37, 60, -66); // Position near the house
+        bedModel.rotateY(-Math.PI / 4); // Rotate 45 degrees around Y axis
+        scene.add(bedModel);
+        bedModelRef.current = bedModel;
+      });
 
       gltfLoader.load('/house/projectTitle.glb', (gltf2) => {
         const bedModel = gltf2.scene;
         bedModel.name = 'projectTitle';
-        bedModel.scale.set(15, 15, 15); // Adjust scale as needed
-        bedModel.position.set(65, 1, -38); // Position near the house
+        bedModel.scale.set(16, 16, 16); // Adjust scale as needed
+        bedModel.position.set(67, 1, -36); // Position near the house
         bedModel.rotateY(-Math.PI / 4); // Rotate 45 degrees around Y axis
         scene.add(bedModel);
         bedModelRef.current = bedModel;
@@ -407,7 +499,7 @@ const Scene = () => {
         const bedModel = gltf2.scene;
         bedModel.name = 'eemunTitle';
         bedModel.scale.set(15, 15, 15); // Adjust scale as needed
-        bedModel.position.set(41, 1, -62); // Position near the house
+        bedModel.position.set(39, 1, -64); // Position near the house
         bedModel.rotateY(-Math.PI / 4); // Rotate 45 degrees around Y axis
         scene.add(bedModel);
         bedModelRef.current = bedModel;
@@ -433,13 +525,72 @@ const Scene = () => {
         chairModelRef.current = chairModel;
       });
 
-      gltfLoader.load('/house/robot.glb', (gltf2) => {
-        const bedModel = gltf2.scene;
-        bedModel.name = 'robot';
-        bedModel.scale.set(10, 10, 10); // Adjust scale as needed
-        bedModel.position.set(-45, 40, -78); // Position near the house
-        scene.add(bedModel);
-        bedModelRef.current = bedModel;
+      gltfLoader.load('/house/robot_walk.glb', (gltf2) => {
+        const robotModel = gltf2.scene;
+        robotModel.name = 'robot';
+        robotModel.scale.set(0.2, 0.2, 0.2);
+        robotModel.position.set(-45, 47, -78);
+        scene.add(robotModel);
+        robotModelRef.current = robotModel;
+
+        // Set up animation mixer for robot
+        if (gltf2.animations.length > 0) {
+          robotMixerRef.current = new THREE.AnimationMixer(robotModel);
+          const action = robotMixerRef.current.clipAction(gltf2.animations[0]);
+          action.play();
+        }
+
+        // Add a second projector screen near the robot
+        const screenWidth = 40;   // width of the screen
+        const screenHeight = 25;  // height of the screen
+        const screenGeometry = new THREE.PlaneGeometry(screenWidth, screenHeight);
+        const screenMaterial = new THREE.MeshStandardMaterial({
+          color: 0xFFC0CB,
+          side: THREE.DoubleSide,
+          roughness: 0.7,
+          metalness: 0.1,
+          transparent: true,
+          opacity: 0.5
+        });
+        const robotProjectorScreen = new THREE.Mesh(screenGeometry, screenMaterial);
+        robotProjectorScreen.position.set(-45, 60, -78); // Position above the robot
+        robotProjectorScreen.name = 'robotProjectorScreen';
+        robotProjectorScreen.visible = false; // Start hidden
+        scene.add(robotProjectorScreen);
+        robotScreenRef.current = robotProjectorScreen;
+
+        // Add a black border plane behind the screen for a thick border effect
+        const borderPlaneGeometry = new THREE.PlaneGeometry(screenWidth + 2, screenHeight + 2);
+        const borderPlaneMaterial = new THREE.MeshBasicMaterial({
+          color: 0xFFC0CB,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.3
+        });
+        const borderPlane = new THREE.Mesh(borderPlaneGeometry, borderPlaneMaterial);
+        borderPlane.position.copy(robotProjectorScreen.position);
+        borderPlane.rotation.copy(robotProjectorScreen.rotation);
+        borderPlane.position.z -= 0.2; // Slightly further behind the screen
+        borderPlane.visible = false; // Start hidden
+        scene.add(borderPlane);
+        robotBorderPlaneRef.current = borderPlane;
+
+        // Add a thin outline border using EdgesGeometry
+        const edgeGeometry = new THREE.EdgesGeometry(screenGeometry);
+        const edgeMaterial = new THREE.LineBasicMaterial({ color: 0xFFC0CB, linewidth: 2 });
+        const border = new THREE.LineSegments(edgeGeometry, edgeMaterial);
+        border.position.copy(robotProjectorScreen.position);
+        border.rotation.copy(robotProjectorScreen.rotation);
+        border.visible = false; // Start hidden
+        scene.add(border);
+        robotBorderRef.current = border;
+
+        if (chatbotRef.current && chatbotRef.current.getTexture()) {
+          (robotProjectorScreen.material as THREE.MeshStandardMaterial).map = chatbotRef.current.getTexture();
+          (robotProjectorScreen.material as THREE.MeshStandardMaterial).opacity = 1;
+          (robotProjectorScreen.material as THREE.MeshStandardMaterial).transparent = true;
+          (robotProjectorScreen.material as THREE.MeshStandardMaterial).needsUpdate = true;
+        }
       });
       
       gltfLoader.load('/house/wardrobe.glb', (gltf2) => {
@@ -733,6 +884,27 @@ const Scene = () => {
       if (poodle.mixer) {
         poodle.mixer.update(delta);
       }
+      if (robotMixerRef.current) {
+        robotMixerRef.current.update(delta);
+      }
+
+      // If camera is locked to chat view, ensure it maintains the correct position
+      if (isCameraLockedToChat && robotScreenRef.current) {
+        const screenPosition = robotScreenRef.current.position.clone();
+        controls.target.copy(screenPosition);
+        
+        // Limit camera movement while chatting
+        controls.minDistance = 30;
+        controls.maxDistance = 50;
+        controls.minPolarAngle = Math.PI / 4; // Limit vertical rotation
+        controls.maxPolarAngle = Math.PI / 2;
+      } else {
+        // Normal camera controls when not chatting
+        controls.minDistance = 0;
+        controls.maxDistance = Infinity;
+        controls.minPolarAngle = 0;
+        controls.maxPolarAngle = Math.PI;
+      }
 
       controls.update();
       renderer.render(scene, camera);
@@ -786,6 +958,9 @@ const Scene = () => {
       if (poodle.mixer) {
         poodle.mixer.stopAllAction();
       }
+      if (robotMixerRef.current) {
+        robotMixerRef.current.stopAllAction();
+      }
 
       // Dispose of controls
       if (controls) {
@@ -801,41 +976,23 @@ const Scene = () => {
     };
   }, [isMounted]);
 
+  // Update screen visibility when state changes
+  useEffect(() => {
+    if (robotScreenRef.current) {
+      robotScreenRef.current.visible = showRobotScreen;
+    }
+    if (robotBorderPlaneRef.current) {
+      robotBorderPlaneRef.current.visible = showRobotScreen;
+    }
+    if (robotBorderRef.current) {
+      robotBorderRef.current.visible = showRobotScreen;
+    }
+  }, [showRobotScreen]);
+
   return (
     <div style={{ position: 'relative', width: '100%', height: '100vh' }}>
       <div ref={mountRef} style={{ width: '100%', height: '100%' }} />
-      {showButton && (
-        <button
-          style={{
-            position: 'fixed',
-            left: '50%',
-            top: '80%',
-            transform: 'translate(-50%, -50%)',
-            padding: '20px 40px',
-            backgroundColor: '#FFB6C1', // Baby pink
-            color: '#FFFFFF',
-            border: 'none',
-            borderRadius: '10px',
-            cursor: 'pointer',
-            zIndex: 1000,
-            fontSize: '24px',
-            fontWeight: 'bold',
-            boxShadow: '0 4px 8px rgba(255, 182, 193, 0.3)',
-            textShadow: '1px 1px 2px rgba(0,0,0,0.2)',
-            letterSpacing: '1px',
-            transition: 'all 0.3s ease',
-            ':hover': {
-              backgroundColor: '#FFC0CB', // Lighter pink on hover
-              transform: 'translate(-50%, -50%) scale(1.05)',
-            }
-          }}
-          onClick={() => {
-            console.log('Button clicked!');
-          }}
-        >
-          Exit House
-        </button>
-      )}
+      <Chatbot ref={chatbotRef} visible={showRobotScreen} />
     </div>
   );
 };
