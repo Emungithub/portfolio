@@ -470,14 +470,14 @@ const Scene = () => {
       });
 
       const projectImages = [
-        { file: '/portfolio/project1.png', pos: [36, 50, -60], rotY: -Math.PI / 4, name: 'project2Image', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [36, 40, -60], rotY: -Math.PI / 4, name: 'project3Image', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [36, 30, -60], rotY: -Math.PI / 4, name: 'project4Image', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [48, 50, -48], rotY: -Math.PI / 4, name: 'project5Image', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [48, 30, -48], rotY: -Math.PI / 4, name: 'project6Image', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [60, 50, -36], rotY: -Math.PI / 4, name: 'project7Image', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [60, 40, -36], rotY: -Math.PI / 4, name: 'project8Image', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [60, 30, -36], rotY: -Math.PI / 4, name: 'project9Image', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [36, 50, -60] as [number, number, number], rotY: -Math.PI / 4, name: 'project2Image', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [36, 40, -60] as [number, number, number], rotY: -Math.PI / 4, name: 'project3Image', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [36, 30, -60] as [number, number, number], rotY: -Math.PI / 4, name: 'project4Image', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [48, 50, -48] as [number, number, number], rotY: -Math.PI / 4, name: 'project5Image', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [48, 30, -48] as [number, number, number], rotY: -Math.PI / 4, name: 'project6Image', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [60, 50, -36] as [number, number, number], rotY: -Math.PI / 4, name: 'project7Image', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [60, 40, -36] as [number, number, number], rotY: -Math.PI / 4, name: 'project8Image', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [60, 30, -36] as [number, number, number], rotY: -Math.PI / 4, name: 'project9Image', url: 'https://eemunportfolio.vercel.app/' },
       ];
 
       projectImages.forEach(({ file, pos, rotY, name, url }) => {
