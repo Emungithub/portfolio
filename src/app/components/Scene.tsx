@@ -56,6 +56,14 @@ const Scene = () => {
       // Calculate objects intersecting the picking ray
       const intersects = raycaster.intersectObjects(scene.children, true);
 
+      // Check if a project image was clicked
+      for (const intersect of intersects) {
+        if (intersect.object.userData && intersect.object.userData.url) {
+          window.open(intersect.object.userData.url, '_blank');
+          return;
+        }
+      }
+
       // Check if house was clicked
       const houseClicked = intersects.some(intersect => {
         let obj = intersect.object;
@@ -455,17 +463,17 @@ const Scene = () => {
       });
 
       const projectImages = [
-        { file: '/portfolio/project1.png', pos: [36, 50, -60], rotY: -Math.PI / 4, name: 'project2Image' },
-        { file: '/portfolio/project1.png', pos: [36, 40, -60], rotY: -Math.PI / 4, name: 'project3Image' },
-        { file: '/portfolio/project1.png', pos: [36, 30, -60], rotY: -Math.PI / 4, name: 'project4Image' },
-        { file: '/portfolio/project1.png', pos: [48, 50, -48], rotY: -Math.PI / 4, name: 'project5Image' },
-        { file: '/portfolio/project1.png', pos: [48, 30, -48], rotY: -Math.PI / 4, name: 'project6Image' },
-        { file: '/portfolio/project1.png', pos: [60, 50, -36], rotY: -Math.PI / 4, name: 'project7Image' },
-        { file: '/portfolio/project1.png', pos: [60, 40, -36], rotY: -Math.PI / 4, name: 'project8Image' },
-        { file: '/portfolio/project1.png', pos: [60, 30, -36], rotY: -Math.PI / 4, name: 'project9Image' },
+        { file: '/portfolio/project1.png', pos: [36, 50, -60], rotY: -Math.PI / 4, name: 'project2Image', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [36, 40, -60], rotY: -Math.PI / 4, name: 'project3Image', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [36, 30, -60], rotY: -Math.PI / 4, name: 'project4Image', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [48, 50, -48], rotY: -Math.PI / 4, name: 'project5Image', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [48, 30, -48], rotY: -Math.PI / 4, name: 'project6Image', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [60, 50, -36], rotY: -Math.PI / 4, name: 'project7Image', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [60, 40, -36], rotY: -Math.PI / 4, name: 'project8Image', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [60, 30, -36], rotY: -Math.PI / 4, name: 'project9Image', url: 'https://eemunportfolio.vercel.app/' },
       ];
 
-      projectImages.forEach(({ file, pos, rotY, name }) => {
+      projectImages.forEach(({ file, pos, rotY, name, url }) => {
         loader.load(file, (texture) => {
           const imgWidth = 15;
           const imgHeight = 8;
@@ -475,6 +483,7 @@ const Scene = () => {
           imagePlane.position.set(...pos);
           imagePlane.rotation.y = rotY;
           imagePlane.name = name;
+          imagePlane.userData.url = url;
           scene.add(imagePlane);
         });
       });
