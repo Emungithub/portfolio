@@ -362,8 +362,9 @@ const Scene = () => {
       gltfLoader.load('/house/robot.glb', (gltf2) => {
         const bedModel = gltf2.scene;
         bedModel.name = 'robot';
-        bedModel.scale.set(10, 10, 10); // Adjust scale as needed
-        bedModel.position.set(-45, 1, -80); // Position near the house
+        bedModel.scale.set(15, 15, 15); // Adjust scale as needed
+        bedModel.position.set(53, 1, -50); // Position near the house
+        bedModel.rotateY(-Math.PI / 4); // Rotate 45 degrees around Y axis
         scene.add(bedModel);
         bedModelRef.current = bedModel;
       });
@@ -403,7 +404,7 @@ const Scene = () => {
       const screenHeight = 35;  // height of the screen
       const screenGeometry = new THREE.PlaneGeometry(screenWidth, screenHeight);
       const screenMaterial = new THREE.MeshStandardMaterial({
-        color: 0xffffff, // color doesn't matter if fully transparent
+        color: 0xFFC0CB, // color doesn't matter if fully transparent
         side: THREE.DoubleSide,
         roughness: 0.7,
         metalness: 0.1,
@@ -411,8 +412,8 @@ const Scene = () => {
         opacity: 0.5 // Fully see-through
       });
       const projectorScreen = new THREE.Mesh(screenGeometry, screenMaterial);
-      projectorScreen.position.set(30, 25, 0); // Adjust position as needed
-      projectorScreen.rotation.y = Math.PI / 4; // Rotate 45 degrees around Y axis
+      projectorScreen.position.set(50, 40, -50); // Adjust position as needed
+      projectorScreen.rotation.y = -Math.PI / 4 ; // Rotate 225 degrees around Y axis
       projectorScreen.name = 'projectorScreen';
       scene.add(projectorScreen);
 
@@ -432,7 +433,7 @@ const Scene = () => {
 
       // Add a thin outline border using EdgesGeometry
       const edgeGeometry = new THREE.EdgesGeometry(screenGeometry);
-      const edgeMaterial = new THREE.LineBasicMaterial({ color: 0x222222, linewidth: 2 });
+      const edgeMaterial = new THREE.LineBasicMaterial({ color: 0xFFC0CB, linewidth: 2 });
       const border = new THREE.LineSegments(edgeGeometry, edgeMaterial);
       border.position.copy(projectorScreen.position);
       border.rotation.copy(projectorScreen.rotation);
