@@ -438,6 +438,46 @@ const Scene = () => {
       border.position.copy(projectorScreen.position);
       border.rotation.copy(projectorScreen.rotation);
       scene.add(border);
+
+      // Load and display portfolio/project1.png as a plane in the scene
+      //project image (portfolio)
+      const loader = new THREE.TextureLoader();
+      loader.load('/portfolio/project1.png', (texture) => {
+        const imgWidth = 15;  // Adjust as needed 
+        const imgHeight = 8; // Adjust as needed
+        const geometry = new THREE.PlaneGeometry(imgWidth, imgHeight);
+        const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
+        const imagePlane = new THREE.Mesh(geometry, material);
+        imagePlane.position.set(48, 40, -48); //center
+        imagePlane.rotation.y = -Math.PI / 4 ; 
+        imagePlane.name = 'project1Image';
+        scene.add(imagePlane);
+      });
+
+      const projectImages = [
+        { file: '/portfolio/project1.png', pos: [36, 50, -60], rotY: -Math.PI / 4, name: 'project2Image' },
+        { file: '/portfolio/project1.png', pos: [36, 40, -60], rotY: -Math.PI / 4, name: 'project3Image' },
+        { file: '/portfolio/project1.png', pos: [36, 30, -60], rotY: -Math.PI / 4, name: 'project4Image' },
+        { file: '/portfolio/project1.png', pos: [48, 50, -48], rotY: -Math.PI / 4, name: 'project5Image' },
+        { file: '/portfolio/project1.png', pos: [48, 30, -48], rotY: -Math.PI / 4, name: 'project6Image' },
+        { file: '/portfolio/project1.png', pos: [60, 50, -36], rotY: -Math.PI / 4, name: 'project7Image' },
+        { file: '/portfolio/project1.png', pos: [60, 40, -36], rotY: -Math.PI / 4, name: 'project8Image' },
+        { file: '/portfolio/project1.png', pos: [60, 30, -36], rotY: -Math.PI / 4, name: 'project9Image' },
+      ];
+
+      projectImages.forEach(({ file, pos, rotY, name }) => {
+        loader.load(file, (texture) => {
+          const imgWidth = 15;
+          const imgHeight = 8;
+          const geometry = new THREE.PlaneGeometry(imgWidth, imgHeight);
+          const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
+          const imagePlane = new THREE.Mesh(geometry, material);
+          imagePlane.position.set(...pos);
+          imagePlane.rotation.y = rotY;
+          imagePlane.name = name;
+          scene.add(imagePlane);
+        });
+      });
     });
 
     // Camera position
