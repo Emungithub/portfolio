@@ -345,7 +345,7 @@ const Scene = () => {
       gltfLoader.load('/house/desktop.glb', (gltf2) => {
         const destopModel = gltf2.scene;
         destopModel.name = 'destop';
-        destopModel.scale.set(30, 20, 20); // Adjust scale as needed
+        destopModel.scale.set(30, 30, 30); // Adjust scale as needed
         destopModel.position.set(0, 1, -78); // Position near the house
         scene.add(destopModel);
         desktopModelRef.current = destopModel;
@@ -359,6 +359,14 @@ const Scene = () => {
         scene.add(bedModel);
         bedModelRef.current = bedModel;
       });
+      gltfLoader.load('/house/robot.glb', (gltf2) => {
+        const bedModel = gltf2.scene;
+        bedModel.name = 'robot';
+        bedModel.scale.set(10, 10, 10); // Adjust scale as needed
+        bedModel.position.set(-45, 1, -80); // Position near the house
+        scene.add(bedModel);
+        bedModelRef.current = bedModel;
+      });
 
       gltfLoader.load('/house/gamingChair.glb', (gltf2) => {
         const chairModel = gltf2.scene;
@@ -369,6 +377,66 @@ const Scene = () => {
         scene.add(chairModel);
         chairModelRef.current = chairModel;
       });
+      gltfLoader.load('/house/blindbox.glb', (gltf2) => {
+        const chairModel = gltf2.scene;
+        chairModel.name = 'blindbox';
+        chairModel.scale.set(30, 30, 30); // Adjust scale as needed
+        chairModel.position.set(-20, 1, 50); // Position near the house       
+        chairModel.rotateY(Math.PI);
+ 
+        scene.add(chairModel);
+        chairModelRef.current = chairModel;
+      });
+      
+      gltfLoader.load('/house/wardrobe.glb', (gltf2) => {
+        const chairModel = gltf2.scene;
+        chairModel.name = 'wardrobe';
+        chairModel.scale.set(30, 30, 30); // Adjust scale as needed
+        chairModel.position.set(15, 1, 50); // Position near the house
+        chairModel.rotateY(Math.PI);
+        scene.add(chairModel);
+        chairModelRef.current = chairModel;
+      });
+
+      // Add a 3D flat projector screen
+      const screenWidth = 60;   // width of the screen
+      const screenHeight = 35;  // height of the screen
+      const screenGeometry = new THREE.PlaneGeometry(screenWidth, screenHeight);
+      const screenMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffffff, // color doesn't matter if fully transparent
+        side: THREE.DoubleSide,
+        roughness: 0.7,
+        metalness: 0.1,
+        transparent: true,
+        opacity: 0.5 // Fully see-through
+      });
+      const projectorScreen = new THREE.Mesh(screenGeometry, screenMaterial);
+      projectorScreen.position.set(30, 25, 0); // Adjust position as needed
+      projectorScreen.rotation.y = Math.PI / 4; // Rotate 45 degrees around Y axis
+      projectorScreen.name = 'projectorScreen';
+      scene.add(projectorScreen);
+
+      // Add a black border plane behind the screen for a thick border effect
+      const borderPlaneGeometry = new THREE.PlaneGeometry(screenWidth + 2, screenHeight + 2);
+      const borderPlaneMaterial = new THREE.MeshBasicMaterial({
+        color: 0xFFC0CB,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.3
+      });
+      const borderPlane = new THREE.Mesh(borderPlaneGeometry, borderPlaneMaterial);
+      borderPlane.position.copy(projectorScreen.position);
+      borderPlane.rotation.copy(projectorScreen.rotation);
+      borderPlane.position.z -= 0.2; // Slightly further behind the screen
+      scene.add(borderPlane);
+
+      // Add a thin outline border using EdgesGeometry
+      const edgeGeometry = new THREE.EdgesGeometry(screenGeometry);
+      const edgeMaterial = new THREE.LineBasicMaterial({ color: 0x222222, linewidth: 2 });
+      const border = new THREE.LineSegments(edgeGeometry, edgeMaterial);
+      border.position.copy(projectorScreen.position);
+      border.rotation.copy(projectorScreen.rotation);
+      scene.add(border);
     });
 
     // Camera position
@@ -469,12 +537,19 @@ const Scene = () => {
           const direction = poodle.targetPosition.clone().sub(poodle.object.position);
           if (direction.length() > 0.1) {
             direction.normalize();
-            // Only move if not too close to character
             const distToChar = poodle.object.position.distanceTo(character.object.position);
             if (distToChar > minPoodleDistance) {
               poodleNextPos.add(direction.multiplyScalar(poodle.walkSpeed * delta));
-              // Check if new position would be too close
-              if (poodleNextPos.distanceTo(character.object.position) >= minPoodleDistance) {
+              // Restrict poodle to centerBox
+              const centerBox = scene.getObjectByName('centerBox');
+              const center = centerBox instanceof THREE.Mesh ? centerBox.position : new THREE.Vector3();
+              const centerSize = new THREE.Vector3(150, 50, 100); // Use the same as your centerBoxSize
+              if (
+                poodleNextPos.distanceTo(character.object.position) >= minPoodleDistance &&
+                Math.abs(poodleNextPos.x - center.x) <= centerSize.x / 2 &&
+                Math.abs(poodleNextPos.y - center.y) <= centerSize.y / 2 &&
+                Math.abs(poodleNextPos.z - center.z) <= centerSize.z / 2
+              ) {
                 poodle.object.position.copy(poodleNextPos);
               }
             }
