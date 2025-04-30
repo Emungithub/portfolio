@@ -812,17 +812,22 @@ const Scene = () => {
             top: '80%',
             transform: 'translate(-50%, -50%)',
             padding: '20px 40px',
-            backgroundColor: '#4CAF50',
-            color: 'white',
+            backgroundColor: '#FFB6C1', // Baby pink
+            color: '#FFFFFF',
             border: 'none',
             borderRadius: '10px',
             cursor: 'pointer',
             zIndex: 1000,
             fontSize: '24px',
             fontWeight: 'bold',
-            boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
-            textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
-            letterSpacing: '1px'
+            boxShadow: '0 4px 8px rgba(255, 182, 193, 0.3)',
+            textShadow: '1px 1px 2px rgba(0,0,0,0.2)',
+            letterSpacing: '1px',
+            transition: 'all 0.3s ease',
+            ':hover': {
+              backgroundColor: '#FFC0CB', // Lighter pink on hover
+              transform: 'translate(-50%, -50%) scale(1.05)',
+            }
           }}
           onClick={() => {
             console.log('Button clicked!');
