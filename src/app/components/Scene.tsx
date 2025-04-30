@@ -383,6 +383,35 @@ const Scene = () => {
         scene.add(bedModel);
         bedModelRef.current = bedModel;
       });
+    //   gltfLoader.load('/house/projectTitle.glb', (gltf2) => {
+    //     const bedModel = gltf2.scene;
+    //     bedModel.name = 'projectTitle';
+    //     bedModel.scale.set(15, 15, 15); // Adjust scale as needed
+    //     bedModel.position.set(53, 60, -50); // Position near the house
+    //     bedModel.rotateY(-Math.PI / 4); // Rotate 45 degrees around Y axis
+    //     scene.add(bedModel);
+    //     bedModelRef.current = bedModel;
+    //   });
+
+      gltfLoader.load('/house/projectTitle.glb', (gltf2) => {
+        const bedModel = gltf2.scene;
+        bedModel.name = 'projectTitle';
+        bedModel.scale.set(15, 15, 15); // Adjust scale as needed
+        bedModel.position.set(65, 1, -38); // Position near the house
+        bedModel.rotateY(-Math.PI / 4); // Rotate 45 degrees around Y axis
+        scene.add(bedModel);
+        bedModelRef.current = bedModel;
+      });
+
+      gltfLoader.load('/house/eemun.glb', (gltf2) => {
+        const bedModel = gltf2.scene;
+        bedModel.name = 'eemunTitle';
+        bedModel.scale.set(15, 15, 15); // Adjust scale as needed
+        bedModel.position.set(41, 1, -62); // Position near the house
+        bedModel.rotateY(-Math.PI / 4); // Rotate 45 degrees around Y axis
+        scene.add(bedModel);
+        bedModelRef.current = bedModel;
+      });
 
       gltfLoader.load('/house/gamingChair.glb', (gltf2) => {
         const chairModel = gltf2.scene;
@@ -396,12 +425,21 @@ const Scene = () => {
       gltfLoader.load('/house/blindbox.glb', (gltf2) => {
         const chairModel = gltf2.scene;
         chairModel.name = 'blindbox';
-        chairModel.scale.set(30, 30, 30); // Adjust scale as needed
-        chairModel.position.set(-20, 1, 50); // Position near the house       
-        chairModel.rotateY(Math.PI);
+        chairModel.scale.set(30, 20, 30); // Adjust scale as needed
+        chairModel.position.set(-45, 1, -78); // Position near the house       
+        //chairModel.rotateY(Math.PI);
  
         scene.add(chairModel);
         chairModelRef.current = chairModel;
+      });
+
+      gltfLoader.load('/house/robot.glb', (gltf2) => {
+        const bedModel = gltf2.scene;
+        bedModel.name = 'robot';
+        bedModel.scale.set(10, 10, 10); // Adjust scale as needed
+        bedModel.position.set(-45, 40, -78); // Position near the house
+        scene.add(bedModel);
+        bedModelRef.current = bedModel;
       });
       
       gltfLoader.load('/house/wardrobe.glb', (gltf2) => {
@@ -412,6 +450,16 @@ const Scene = () => {
         chairModel.rotateY(Math.PI);
         scene.add(chairModel);
         chairModelRef.current = chairModel;
+      });
+
+      gltfLoader.load('/house/coffeebar.glb', (gltf2) => {
+        const bedModel = gltf2.scene;
+        bedModel.name = 'coffeebar';
+        bedModel.scale.set(30, 30, 30); // Adjust scale as needed
+        bedModel.position.set(-60, 40, 40); // Position near the house
+        bedModel.rotateY(Math.PI); // Rotate 45 degrees around Y axis
+        scene.add(bedModel);
+        bedModelRef.current = bedModel;
       });
 
       // Add a 3D flat projector screen
@@ -497,7 +545,7 @@ const Scene = () => {
     });
 
     // Camera position
-    camera.position.set(15, 50, 400);
+    camera.position.set(15, 50, 250);
     camera.lookAt(0, 0, 150);
 
     // State to track if character is in house
@@ -550,7 +598,7 @@ const Scene = () => {
           isInHouse = false;
           hasTeleportedToCenter = false;
         }
-
+//In house camera
         // Restrict movement to centerBox if in house and not colliding with obstacles
         if (isInHouse && centerBox instanceof THREE.Mesh && !willCollide) {
           // Only allow movement if next position is inside centerBox
@@ -560,7 +608,7 @@ const Scene = () => {
             character.object.position.copy(nextPosition);
           }
           // Camera and color logic for being inside the center box
-          const cameraOffset = new THREE.Vector3(0, 60, 50);
+          const cameraOffset = new THREE.Vector3(0, 35, -65);
           const targetCameraPos = character.object.position.clone().add(cameraOffset);
           camera.position.copy(targetCameraPos);
           camera.lookAt(character.object.position);
@@ -570,9 +618,50 @@ const Scene = () => {
           controls.maxPolarAngle = Math.PI / 2;
           controls.minPolarAngle = Math.PI / 4;
           (centerBox.material as THREE.MeshBasicMaterial).color.set(0xff0000);
+
+          // Set camera rotation based on movement direction
+          if (character.direction.z > 0) { // Moving down
+            const cameraOffset = new THREE.Vector3(0, 35, -65);
+            const targetCameraPos = character.object.position.clone().add(cameraOffset);
+            camera.position.copy(targetCameraPos);
+            camera.lookAt(character.object.position);
+            controls.target.copy(character.object.position);
+          } else if (character.direction.z < 0) { // Moving up
+            const cameraOffset = new THREE.Vector3(0, 35, 65);
+            const targetCameraPos = character.object.position.clone().add(cameraOffset);
+            camera.position.copy(targetCameraPos);
+            camera.lookAt(character.object.position);
+            controls.target.copy(character.object.position);
+          }
         } else if (!isInHouse && !willCollide) {
           // Normal movement outside house
           character.object.position.copy(nextPosition);
+          
+          // Update camera position to follow character from behind
+          if (character.direction.z > 0) { // Moving down (character facing camera)
+            const cameraOffset = new THREE.Vector3(0, 35, -65); // Increased negative z to position further behind
+            const targetCameraPos = character.object.position.clone().add(cameraOffset);
+            camera.position.copy(targetCameraPos);
+            camera.lookAt(character.object.position);
+            controls.target.copy(character.object.position);
+          } else if (character.direction.z < 0) { // Moving up (character facing away)
+            const cameraOffset = new THREE.Vector3(0, 35, 65); // Increased positive z to position further in front
+            const targetCameraPos = character.object.position.clone().add(cameraOffset);
+            camera.position.copy(targetCameraPos);
+            camera.lookAt(character.object.position);
+            controls.target.copy(character.object.position);
+          } else if (character.direction.x !== 0) { // Moving left/right
+            const cameraOffset = new THREE.Vector3(0, 35, 65); // Increased distance for side views
+            const targetCameraPos = character.object.position.clone().add(cameraOffset);
+            camera.position.copy(targetCameraPos);
+            camera.lookAt(character.object.position);
+            controls.target.copy(character.object.position);
+            // Set rotation to Math.PI for left/right movement
+            if (character.object) {
+              character.object.rotation.y = Math.PI;
+            }
+          }
+          
           controls.minDistance = 0;
           controls.maxDistance = Infinity;
           controls.maxPolarAngle = Math.PI;
