@@ -12,6 +12,7 @@ const Scene = () => {
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const [showButton, setShowButton] = useState(false);
   const [buttonPosition, setButtonPosition] = useState({ x: 0, y: 0 });
+  const [isMounted, setIsMounted] = useState(false);
   const houseModelRef = useRef<THREE.Object3D | null>(null);
   const houseBoxRef = useRef<THREE.BoxHelper | null>(null);
   const desktopModelRef = useRef<THREE.Object3D | null>(null);
@@ -19,7 +20,11 @@ const Scene = () => {
   const chairModelRef = useRef<THREE.Object3D | null>(null);
 
   useEffect(() => {
-    if (!mountRef.current) return;
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mountRef.current || !isMounted) return;
 
     // Clear any existing content
     while (mountRef.current.firstChild) {
@@ -705,7 +710,7 @@ const Scene = () => {
         }
       }
     };
-  }, []);
+  }, [isMounted]);
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100vh' }}>
