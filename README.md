@@ -1,3 +1,11 @@
+# 3D Portfolio Scene
+
+![Portfolio Project Screenshot](./public/portfolio/project1.png)
+
+This project is a 3D interactive portfolio built with [Next.js](https://nextjs.org) and [Three.js](https://threejs.org/). It features animated models, interactive objects, and a virtual environment to showcase projects and skills.
+
+---
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
