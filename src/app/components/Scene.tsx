@@ -865,14 +865,14 @@ const Scene = () => {
       });
 
       const projectImages = [
-        { file: '/portfolio/project1.png', pos: [36, 50, -60] as [number, number, number], rotY: -Math.PI / 4, name: 'project2Image', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [36, 40, -60] as [number, number, number], rotY: -Math.PI / 4, name: 'project3Image', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [36, 30, -60] as [number, number, number], rotY: -Math.PI / 4, name: 'project4Image', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [48, 50, -48] as [number, number, number], rotY: -Math.PI / 4, name: 'project5Image', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [48, 30, -48] as [number, number, number], rotY: -Math.PI / 4, name: 'project6Image', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [60, 50, -36] as [number, number, number], rotY: -Math.PI / 4, name: 'project7Image', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [60, 40, -36] as [number, number, number], rotY: -Math.PI / 4, name: 'project8Image', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [60, 30, -36] as [number, number, number], rotY: -Math.PI / 4, name: 'project9Image', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project2.png', pos: [36, 50, -60] as [number, number, number], rotY: -Math.PI / 4, name: 'HackSplit', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project3.png', pos: [36, 40, -60] as [number, number, number], rotY: -Math.PI / 4, name: 'PawChain', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [36, 30, -60] as [number, number, number], rotY: -Math.PI / 4, name: 'Graphic Programming', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [48, 50, -48] as [number, number, number], rotY: -Math.PI / 4, name: 'Java', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [48, 30, -48] as [number, number, number], rotY: -Math.PI / 4, name: 'Mixue', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [60, 50, -36] as [number, number, number], rotY: -Math.PI / 4, name: 'TravelConnect', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [60, 40, -36] as [number, number, number], rotY: -Math.PI / 4, name: 'Recycle_Reward_System', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [60, 30, -36] as [number, number, number], rotY: -Math.PI / 4, name: 'CureMeBaby', url: 'https://eemunportfolio.vercel.app/' },
       ];
 
       // Only add project images if showProjects is true
@@ -974,6 +974,11 @@ const Scene = () => {
           camera.position.copy(targetCameraPos);
           camera.lookAt(character.object.position);
           controls.target.copy(character.object.position);
+          
+          // Limit camera zoom when inside the inner box
+          controls.minDistance = 30; // Minimum zoom distance
+          controls.maxDistance = 80; // Maximum zoom distance
+          controls.update();
         } else if (!isInHouse && !willCollide) {
           // Normal movement outside house
           character.object.position.copy(nextPosition);
@@ -1002,6 +1007,7 @@ const Scene = () => {
             }
           }
           
+          // Reset camera zoom limits when outside
           controls.minDistance = 0;
           controls.maxDistance = Infinity;
           controls.maxPolarAngle = Math.PI;
