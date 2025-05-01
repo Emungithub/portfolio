@@ -1,6 +1,5 @@
 # 3D Portfolio Scene
 
-![Portfolio Project Screenshot](./public/portfolio/project1.png)
 
 ![project1](https://github.com/user-attachments/assets/87227a59-4f75-43ed-ba26-e2cd75c8361b)
 
