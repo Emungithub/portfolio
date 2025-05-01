@@ -2,13 +2,18 @@
 
 ![Portfolio Project Screenshot](./public/portfolio/project1.png)
 
-<video src="./public/portfolio/project1.mp4" controls width="600" poster="./public/portfolio/project1.png">
-  Your browser does not support the video tag.
-</video>
+![project1](https://github.com/user-attachments/assets/87227a59-4f75-43ed-ba26-e2cd75c8361b)
+
+![demo](https://github.com/user-attachments/assets/35c2c6d3-4512-4804-a4e2-f3d4f5855f8c)
+
+
+https://github.com/user-attachments/assets/4c4550b8-754c-425c-b57a-cc8d9ac2dba9
+
+
 
 *Demo video of the interactive 3D portfolio experience.*
 
-This project is a 3D interactive portfolio built with [Next.js](https://nextjs.org) and [Three.js](https://threejs.org/). It features animated models, interactive objects, and a virtual environment to showcase projects and skills.
+This project is a 3D interactive portfolio built with [Next.js](https://nextjs.org) and [Three.js](https://threejs.org/). It features myself and my pet dog (ah Mao) as animated models. It consists of interactive objects in a virtual environment to showcase my projects and skills.
 
 ---
 
