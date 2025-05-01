@@ -5,7 +5,6 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import Chatbot, { ChatbotHandle } from './Chatbot';
 
 const Scene = () => {
   const mountRef = useRef<HTMLDivElement>(null);
@@ -25,8 +24,12 @@ const Scene = () => {
   const robotBorderPlaneRef = useRef<THREE.Mesh | null>(null);
   const robotBorderRef = useRef<THREE.LineSegments | null>(null);
   const [showRobotScreen, setShowRobotScreen] = useState(false);
-  const chatbotRef = useRef<ChatbotHandle>(null);
   const [isCameraLockedToChat, setIsCameraLockedToChat] = useState(false);
+  const [showProjects, setShowProjects] = useState(true);
+  const [showStart, setShowStart] = useState(true);
+  const [showPause, setShowPause] = useState(false);
+  const startModelRef = useRef<THREE.Object3D | null>(null);
+  const pauseModelRef = useRef<THREE.Object3D | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -58,114 +61,145 @@ const Scene = () => {
 
     // Handle mouse click
     const handleClick = (event: MouseEvent) => {
+      if (!robotModelRef.current) return;
       mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
       mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
       raycaster.setFromCamera(mouse, camera);
       const intersects = raycaster.intersectObjects(scene.children, true);
 
-      const robotClicked = intersects.some(intersect => {
+      // Check for project image click
+      const projectImageClicked = intersects.find(intersect => {
+        return intersect.object.userData && intersect.object.userData.url;
+      });
+      if (projectImageClicked) {
+        const url = projectImageClicked.object.userData.url;
+        if (url) {
+          window.open(url, '_blank');
+          return; // Prevent further handling (e.g., robot toggle)
+        }
+      }
+
+      // Robust descendant check for robot_walk.glb model
+      const robotWalkClicked = intersects.some(intersect => {
         let obj = intersect.object;
-        while (obj.parent) {
-          if (obj.name === 'robot') return true;
+        while (obj) {
+          if (obj === robotModelRef.current) return true;
           obj = obj.parent;
         }
-        return obj.name === 'robot';
+        return false;
       });
 
-      if (robotClicked) {
-        const newShowRobotScreen = !showRobotScreen;
-        setShowRobotScreen(newShowRobotScreen);
-        setIsCameraLockedToChat(newShowRobotScreen);
+      if (robotWalkClicked) {
+        setShowRobotScreen(prev => {
+          const newShowRobotScreen = !prev;
+          setIsCameraLockedToChat(newShowRobotScreen);
 
-        if (newShowRobotScreen && robotScreenRef.current) {
-          const screenPosition = robotScreenRef.current.position.clone();
-          const cameraOffset = new THREE.Vector3(-20, 5, 20);
-          const targetCameraPos = screenPosition.clone().add(cameraOffset);
-          
-          // Smoothly move camera to new position
-          const startPos = camera.position.clone();
-          const startRot = camera.rotation.clone();
-          
-          // Look at the center of the screen
-          const endRot = new THREE.Euler();
-          camera.position.copy(targetCameraPos);
-          camera.lookAt(screenPosition);
-          endRot.copy(camera.rotation);
-          camera.position.copy(startPos);
-          camera.rotation.copy(startRot);
+          // Camera animation logic
+          if (robotScreenRef.current) {
+            if (newShowRobotScreen) {
+              // Opening: move camera to view screen
+              const screenPosition = robotScreenRef.current.position.clone();
+              const cameraOffset = new THREE.Vector3(-20, 5, 20);
+              const targetCameraPos = screenPosition.clone().add(cameraOffset);
+              const startPos = camera.position.clone();
+              const startRot = camera.rotation.clone();
+              const endRot = new THREE.Euler();
+              camera.position.copy(targetCameraPos);
+              camera.lookAt(screenPosition);
+              endRot.copy(camera.rotation);
+              camera.position.copy(startPos);
+              camera.rotation.copy(startRot);
+              const duration = 1000;
+              const startTime = Date.now();
+              const animateCamera = () => {
+                const now = Date.now();
+                const elapsed = now - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const ease = (t: number) => t * t * (3 - 2 * t);
+                const t = ease(progress);
+                camera.position.lerpVectors(startPos, targetCameraPos, t);
+                camera.rotation.x = startRot.x + (endRot.x - startRot.x) * t;
+                camera.rotation.y = startRot.y + (endRot.y - startRot.y) * t;
+                camera.rotation.z = startRot.z + (endRot.z - startRot.z) * t;
+                if (progress < 1) {
+                  requestAnimationFrame(animateCamera);
+                }
+              };
+              animateCamera();
+              controls.target.copy(screenPosition);
+              controls.minDistance = 30;
+              controls.maxDistance = 50;
+              controls.update();
+            } else {
+              // Closing: move camera to character model
+              let charPos = new THREE.Vector3(0, 0, 0);
+              if (character && character.object) {
+                charPos = character.object.position.clone();
+              }
+              const cameraOffset = new THREE.Vector3(0, 35, 65); // Use same offset as when following character
+              const targetCameraPos = charPos.clone().add(cameraOffset);
+              const startPos = camera.position.clone();
+              const startRot = camera.rotation.clone();
+              camera.position.copy(targetCameraPos);
+              camera.lookAt(charPos);
+              const endRot = camera.rotation.clone();
+              camera.position.copy(startPos);
+              camera.rotation.copy(startRot);
+              const duration = 1000;
+              const startTime = Date.now();
+              const animateCamera = () => {
+                const now = Date.now();
+                const elapsed = now - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const ease = (t: number) => t * t * (3 - 2 * t);
+                const t = ease(progress);
+                camera.position.lerpVectors(startPos, targetCameraPos, t);
+                camera.rotation.x = startRot.x + (endRot.x - startRot.x) * t;
+                camera.rotation.y = startRot.y + (endRot.y - startRot.y) * t;
+                camera.rotation.z = startRot.z + (endRot.z - startRot.z) * t;
+                if (progress < 1) {
+                  requestAnimationFrame(animateCamera);
+                }
+              };
+              animateCamera();
+              controls.target.copy(charPos);
+              controls.minDistance = 0;
+              controls.maxDistance = Infinity;
+              controls.update();
+            }
+          }
+          return newShowRobotScreen;
+        });
+      }
 
-          // Animate camera movement
-          const duration = 1000;
-          const startTime = Date.now();
-          
-          const animateCamera = () => {
-            const now = Date.now();
-            const elapsed = now - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            
-            const ease = (t: number) => t * t * (3 - 2 * t);
-            const t = ease(progress);
-            
-            camera.position.lerpVectors(startPos, targetCameraPos, t);
-            camera.rotation.x = startRot.x + (endRot.x - startRot.x) * t;
-            camera.rotation.y = startRot.y + (endRot.y - startRot.y) * t;
-            camera.rotation.z = startRot.z + (endRot.z - startRot.z) * t;
-            
-            if (progress < 1) {
-              requestAnimationFrame(animateCamera);
-            }
-          };
-          
-          animateCamera();
-          
-          // Update controls
-          controls.target.copy(screenPosition);
-          controls.minDistance = 30;
-          controls.maxDistance = 50;
-          controls.update();
-        } else {
-          // Reset camera to default position when closing chatbot
-          const defaultCameraPos = new THREE.Vector3(15, 50, 250);
-          const defaultLookAt = new THREE.Vector3(0, 0, 150);
-          
-          const startPos = camera.position.clone();
-          const startRot = camera.rotation.clone();
-          
-          camera.position.copy(defaultCameraPos);
-          camera.lookAt(defaultLookAt);
-          const endRot = camera.rotation.clone();
-          camera.position.copy(startPos);
-          camera.rotation.copy(startRot);
-          
-          const duration = 1000;
-          const startTime = Date.now();
-          
-          const animateCamera = () => {
-            const now = Date.now();
-            const elapsed = now - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            
-            const ease = (t: number) => t * t * (3 - 2 * t);
-            const t = ease(progress);
-            
-            camera.position.lerpVectors(startPos, defaultCameraPos, t);
-            camera.rotation.x = startRot.x + (endRot.x - startRot.x) * t;
-            camera.rotation.y = startRot.y + (endRot.y - startRot.y) * t;
-            camera.rotation.z = startRot.z + (endRot.z - startRot.z) * t;
-            
-            if (progress < 1) {
-              requestAnimationFrame(animateCamera);
-            }
-          };
-          
-          animateCamera();
-          
-          // Reset controls
-          controls.target.copy(defaultLookAt);
-          controls.minDistance = 0;
-          controls.maxDistance = Infinity;
-          controls.update();
+      // Check for start.glb click
+      const startClicked = intersects.some(intersect => {
+        let obj = intersect.object;
+        while (obj) {
+          if (obj === startModelRef.current) return true;
+          obj = obj.parent ?? null;
         }
+        return false;
+      });
+      if (startClicked) {
+        setShowStart(false);
+        setShowPause(true);
+        return;
+      }
+
+      // Check for pause.glb click
+      const pauseClicked = intersects.some(intersect => {
+        let obj = intersect.object;
+        while (obj) {
+          if (obj === pauseModelRef.current) return true;
+          obj = obj.parent ?? null;
+        }
+        return false;
+      });
+      if (pauseClicked) {
+        setShowStart(true);
+        setShowPause(false);
+        return;
       }
     };
 
@@ -465,25 +499,27 @@ const Scene = () => {
         bedModelRef.current = bedModel;
       });
 
-      gltfLoader.load('/house/start.glb', (gltf2) => {
-        const bedModel = gltf2.scene;
-        bedModel.name = 'projectTitle';
-        bedModel.scale.set(5, 5, 5); // Adjust scale as needed
-        bedModel.position.set(37, 60, -66); // Position near the house
-        bedModel.rotateY(-Math.PI / 4); // Rotate 45 degrees around Y axis
-        scene.add(bedModel);
-        bedModelRef.current = bedModel;
-      });
-
-      gltfLoader.load('/house/pause.glb', (gltf2) => {
-        const bedModel = gltf2.scene;
-        bedModel.name = 'projectTitle';
-        bedModel.scale.set(5, 5, 5); // Adjust scale as needed
-        bedModel.position.set(37, 60, -66); // Position near the house
-        bedModel.rotateY(-Math.PI / 4); // Rotate 45 degrees around Y axis
-        scene.add(bedModel);
-        bedModelRef.current = bedModel;
-      });
+      if (showStart) {
+        gltfLoader.load('/house/start.glb', (gltf2) => {
+          const startModel = gltf2.scene;
+          startModel.name = 'startModel';
+          startModel.scale.set(5, 5, 5);
+          startModel.position.set(37, 60, -66);
+          startModel.rotateY(-Math.PI / 4);
+          scene.add(startModel);
+          startModelRef.current = startModel;
+        });
+      } else {
+        gltfLoader.load('/house/pause.glb', (gltf2) => {
+          const pauseModel = gltf2.scene;
+          pauseModel.name = 'pauseModel';
+          pauseModel.scale.set(5, 5, 5);
+          pauseModel.position.set(37, 60, -66);
+          pauseModel.rotateY(-Math.PI / 4);
+          scene.add(pauseModel);
+          pauseModelRef.current = pauseModel;
+        });
+      }
 
       gltfLoader.load('/house/projectTitle.glb', (gltf2) => {
         const bedModel = gltf2.scene;
@@ -527,7 +563,11 @@ const Scene = () => {
 
       gltfLoader.load('/house/robot_walk.glb', (gltf2) => {
         const robotModel = gltf2.scene;
-        robotModel.name = 'robot';
+        robotModel.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            child.userData.isRobotWalk = true; // Mark all meshes as part of robot_walk
+          }
+        });
         robotModel.scale.set(0.2, 0.2, 0.2);
         robotModel.position.set(-45, 47, -78);
         scene.add(robotModel);
@@ -584,21 +624,14 @@ const Scene = () => {
         border.visible = false; // Start hidden
         scene.add(border);
         robotBorderRef.current = border;
-
-        if (chatbotRef.current && chatbotRef.current.getTexture()) {
-          (robotProjectorScreen.material as THREE.MeshStandardMaterial).map = chatbotRef.current.getTexture();
-          (robotProjectorScreen.material as THREE.MeshStandardMaterial).opacity = 1;
-          (robotProjectorScreen.material as THREE.MeshStandardMaterial).transparent = true;
-          (robotProjectorScreen.material as THREE.MeshStandardMaterial).needsUpdate = true;
-        }
       });
       
       gltfLoader.load('/house/wardrobe.glb', (gltf2) => {
         const chairModel = gltf2.scene;
         chairModel.name = 'wardrobe';
         chairModel.scale.set(30, 30, 30); // Adjust scale as needed
-        chairModel.position.set(15, 1, 50); // Position near the house
-        chairModel.rotateY(Math.PI);
+        chairModel.position.set(63, 1, 10); // Position near the house
+        chairModel.rotateY(-Math.PI/2 - Math.PI/6); // Added 30 degrees (-Math.PI/6)
         scene.add(chairModel);
         chairModelRef.current = chairModel;
       });
@@ -606,8 +639,8 @@ const Scene = () => {
       gltfLoader.load('/house/coffeebar.glb', (gltf2) => {
         const bedModel = gltf2.scene;
         bedModel.name = 'coffeebar';
-        bedModel.scale.set(30, 30, 30); // Adjust scale as needed
-        bedModel.position.set(-60, 40, 40); // Position near the house
+        bedModel.scale.set(40, 40, 40); // Adjust scale as needed
+        bedModel.position.set(-60, 1, 40); // Position near the house
         bedModel.rotateY(Math.PI); // Rotate 45 degrees around Y axis
         scene.add(bedModel);
         bedModelRef.current = bedModel;
@@ -679,20 +712,23 @@ const Scene = () => {
         { file: '/portfolio/project1.png', pos: [60, 30, -36] as [number, number, number], rotY: -Math.PI / 4, name: 'project9Image', url: 'https://eemunportfolio.vercel.app/' },
       ];
 
-      projectImages.forEach(({ file, pos, rotY, name, url }) => {
-        loader.load(file, (texture) => {
-          const imgWidth = 15;
-          const imgHeight = 8;
-          const geometry = new THREE.PlaneGeometry(imgWidth, imgHeight);
-          const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
-          const imagePlane = new THREE.Mesh(geometry, material);
-          imagePlane.position.set(...pos);
-          imagePlane.rotation.y = rotY;
-          imagePlane.name = name;
-          imagePlane.userData.url = url;
-          scene.add(imagePlane);
+      // Only add project images if showProjects is true
+      if (showProjects) {
+        projectImages.forEach(({ file, pos, rotY, name, url }) => {
+          loader.load(file, (texture) => {
+            const imgWidth = 15;
+            const imgHeight = 8;
+            const geometry = new THREE.PlaneGeometry(imgWidth, imgHeight);
+            const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
+            const imagePlane = new THREE.Mesh(geometry, material);
+            imagePlane.position.set(...pos);
+            imagePlane.rotation.y = rotY;
+            imagePlane.name = name;
+            imagePlane.userData.url = url;
+            scene.add(imagePlane);
+          });
         });
-      });
+      }
     });
 
     // Camera position
@@ -989,10 +1025,69 @@ const Scene = () => {
     }
   }, [showRobotScreen]);
 
+  // Add this useEffect for project images:
+  useEffect(() => {
+    if (!sceneRef.current) return;
+    // Remove all project images
+    sceneRef.current?.traverse((obj) => {
+      if (obj instanceof THREE.Mesh && obj.name.startsWith('project')) {
+        sceneRef.current?.remove(obj);
+      }
+    });
+    // Add project images if showProjects is true
+    if (showProjects) {
+      const loader = new THREE.TextureLoader();
+      projectImages.forEach(({ file, pos, rotY, name, url }) => {
+        loader.load(file, (texture) => {
+          const imgWidth = 15;
+          const imgHeight = 8;
+          const geometry = new THREE.PlaneGeometry(imgWidth, imgHeight);
+          const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
+          const imagePlane = new THREE.Mesh(geometry, material);
+          imagePlane.position.set(...pos);
+          imagePlane.rotation.y = rotY;
+          imagePlane.name = name;
+          imagePlane.userData.url = url;
+          sceneRef.current?.add(imagePlane);
+        });
+      });
+    }
+  }, [showProjects]);
+
+  // Add this useEffect for start/pause models:
+  useEffect(() => {
+    if (!sceneRef.current) return;
+    // Remove start and pause models
+    if (startModelRef.current) sceneRef.current?.remove(startModelRef.current);
+    if (pauseModelRef.current) sceneRef.current?.remove(pauseModelRef.current);
+    const gltfLoader = new GLTFLoader();
+    if (showStart) {
+      gltfLoader.load('/house/start.glb', (gltf2) => {
+        const startModel = gltf2.scene;
+        startModel.name = 'startModel';
+        startModel.scale.set(5, 5, 5);
+        startModel.position.set(37, 60, -66);
+        startModel.rotateY(-Math.PI / 4);
+        sceneRef.current?.add(startModel);
+        startModelRef.current = startModel;
+      });
+    }
+    if (showPause) {
+      gltfLoader.load('/house/pause.glb', (gltf2) => {
+        const pauseModel = gltf2.scene;
+        pauseModel.name = 'pauseModel';
+        pauseModel.scale.set(5, 5, 5);
+        pauseModel.position.set(37, 60, -66);
+        pauseModel.rotateY(-Math.PI / 4);
+        sceneRef.current?.add(pauseModel);
+        pauseModelRef.current = pauseModel;
+      });
+    }
+  }, [showStart, showPause]);
+
   return (
     <div style={{ position: 'relative', width: '100%', height: '100vh' }}>
       <div ref={mountRef} style={{ width: '100%', height: '100%' }} />
-      <Chatbot ref={chatbotRef} visible={showRobotScreen} />
     </div>
   );
 };
