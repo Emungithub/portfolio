@@ -2,6 +2,12 @@
 
 ![Portfolio Project Screenshot](./public/portfolio/project1.png)
 
+<video src="./public/portfolio/project1.mp4" controls width="600" poster="./public/portfolio/project1.png">
+  Your browser does not support the video tag.
+</video>
+
+*Demo video of the interactive 3D portfolio experience.*
+
 This project is a 3D interactive portfolio built with [Next.js](https://nextjs.org) and [Three.js](https://threejs.org/). It features animated models, interactive objects, and a virtual environment to showcase projects and skills.
 
 ---
