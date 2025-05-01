@@ -81,7 +81,7 @@ const Scene = () => {
 
       // Check for robot_walk.glb click
       const robotWalkClicked = intersects.some(intersect => {
-        let obj = intersect.object;
+        let obj: THREE.Object3D | null = intersect.object;
         while (obj) {
           if (obj === robotModelRef.current || obj.name === 'robot') return true;
           obj = obj.parent;
@@ -174,10 +174,10 @@ const Scene = () => {
 
       // Check for start.glb click
       const startClicked = intersects.some(intersect => {
-        let obj = intersect.object;
+        let obj: THREE.Object3D | null = intersect.object;
         while (obj) {
           if (obj === startModelRef.current) return true;
-          obj = obj.parent ?? null;
+          obj = obj.parent;
         }
         return false;
       });
@@ -235,10 +235,10 @@ const Scene = () => {
 
       // Check for pause.glb click
       const pauseClicked = intersects.some(intersect => {
-        let obj = intersect.object;
+        let obj: THREE.Object3D | null = intersect.object;
         while (obj) {
           if (obj === pauseModelRef.current) return true;
-          obj = obj.parent ?? null;
+          obj = obj.parent;
         }
         return false;
       });
@@ -291,7 +291,7 @@ const Scene = () => {
         console.log('bedModelRef.current:', bedModelRef.current);
         console.log('intersects:', intersects.map(i => i.object.name));
         const bedClicked = intersects.some(intersect => {
-          let obj = intersect.object;
+          let obj: THREE.Object3D | null = intersect.object;
           while (obj) {
             if (obj === bedModelRef.current || obj.name === 'bed') return true;
             obj = obj.parent;
@@ -312,7 +312,7 @@ const Scene = () => {
 
         // Check for gamingChair.glb click
         const chairClicked = intersects.some(intersect => {
-          let obj = intersect.object;
+          let obj: THREE.Object3D | null = intersect.object;
           while (obj) {
             if (obj === chairModelRef.current || obj.name === 'chair') return true;
             obj = obj.parent;
