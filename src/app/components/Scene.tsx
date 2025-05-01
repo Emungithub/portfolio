@@ -79,11 +79,11 @@ const Scene = () => {
         }
       }
 
-      // Robust descendant check for robot_walk.glb model
+      // Check for robot_walk.glb click
       const robotWalkClicked = intersects.some(intersect => {
         let obj = intersect.object;
         while (obj) {
-          if (obj === robotModelRef.current) return true;
+          if (obj === robotModelRef.current || obj.name === 'robot') return true;
           obj = obj.parent;
         }
         return false;
@@ -184,6 +184,52 @@ const Scene = () => {
       if (startClicked) {
         setShowStart(false);
         setShowPause(true);
+
+        // Move camera to projector screen
+        // Find the projector screen mesh in the scene
+        const projectorScreen = scene.getObjectByName('projectorScreen') as THREE.Mesh;
+        if (projectorScreen) {
+          // Target position: a bit in front of the screen, slightly above
+          const screenPos = projectorScreen.position.clone();
+          const cameraOffset = new THREE.Vector3(0, 0, 45); // 60 units in front of the screen
+          // Rotate offset by the screen's rotation
+          cameraOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), projectorScreen.rotation.y);
+          const targetCameraPos = screenPos.clone().add(cameraOffset);
+          const startPos = camera.position.clone();
+          const startRot = camera.rotation.clone();
+
+          // Set up lookAt rotation
+          camera.position.copy(targetCameraPos);
+          camera.lookAt(screenPos);
+          const endRot = camera.rotation.clone();
+          camera.position.copy(startPos);
+          camera.rotation.copy(startRot);
+
+          // Animate camera movement
+          const duration = 1000;
+          const startTime = Date.now();
+          const animateCamera = () => {
+            const now = Date.now();
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const ease = (t: number) => t * t * (3 - 2 * t);
+            const t = ease(progress);
+            camera.position.lerpVectors(startPos, targetCameraPos, t);
+            camera.rotation.x = startRot.x + (endRot.x - startRot.x) * t;
+            camera.rotation.y = startRot.y + (endRot.y - startRot.y) * t;
+            camera.rotation.z = startRot.z + (endRot.z - startRot.z) * t;
+            if (progress < 1) {
+              requestAnimationFrame(animateCamera);
+            }
+          };
+          animateCamera();
+
+          // Update controls to target the screen
+          controls.target.copy(screenPos);
+          controls.minDistance = 30;
+          controls.maxDistance = 80;
+          controls.update();
+        }
         return;
       }
 
@@ -199,6 +245,92 @@ const Scene = () => {
       if (pauseClicked) {
         setShowStart(true);
         setShowPause(false);
+
+        // Move camera back to character position
+        if (character.object) {
+          const charPos = character.object.position.clone();
+          const cameraOffset = new THREE.Vector3(0, 35, 65); // Use same offset as when following character
+          const targetCameraPos = charPos.clone().add(cameraOffset);
+          const startPos = camera.position.clone();
+          const startRot = camera.rotation.clone();
+
+          // Set up lookAt rotation
+          camera.position.copy(targetCameraPos);
+          camera.lookAt(charPos);
+          const endRot = camera.rotation.clone();
+          camera.position.copy(startPos);
+          camera.rotation.copy(startRot);
+
+          // Animate camera movement
+          const duration = 1000;
+          const startTime = Date.now();
+          const animateCamera = () => {
+            const now = Date.now();
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const ease = (t: number) => t * t * (3 - 2 * t);
+            const t = ease(progress);
+            camera.position.lerpVectors(startPos, targetCameraPos, t);
+            camera.rotation.x = startRot.x + (endRot.x - startRot.x) * t;
+            camera.rotation.y = startRot.y + (endRot.y - startRot.y) * t;
+            camera.rotation.z = startRot.z + (endRot.z - startRot.z) * t;
+            if (progress < 1) {
+              requestAnimationFrame(animateCamera);
+            }
+          };
+          animateCamera();
+
+          // Update controls to target the character
+          controls.target.copy(charPos);
+          controls.minDistance = 0;
+          controls.maxDistance = Infinity;
+          controls.update();
+        }
+
+        // Check for bed.glb click
+        console.log('bedModelRef.current:', bedModelRef.current);
+        console.log('intersects:', intersects.map(i => i.object.name));
+        const bedClicked = intersects.some(intersect => {
+          let obj = intersect.object;
+          while (obj) {
+            if (obj === bedModelRef.current || obj.name === 'bed') return true;
+            obj = obj.parent;
+          }
+          return false;
+        });
+        if (bedClicked) {
+          // Move character to bed and play sitting animation
+          if (bedModelRef.current && character.object) {
+            // Move character to bed position (adjust y as needed for correct sitting position)
+            character.object.position.copy(bedModelRef.current.position.clone().add(new THREE.Vector3(0, 20, 0)));
+            character.object.rotation.y = bedModelRef.current.rotation.y;
+          }
+          // Load sitting animation
+          loadModel('/model/Sitting.fbx');
+          return;
+        }
+
+        // Check for gamingChair.glb click
+        const chairClicked = intersects.some(intersect => {
+          let obj = intersect.object;
+          while (obj) {
+            if (obj === chairModelRef.current || obj.name === 'chair') return true;
+            obj = obj.parent;
+          }
+          return false;
+        });
+        if (chairClicked) {
+          // Move character to chair and play sitting animation
+          if (chairModelRef.current && character.object) {
+            // Adjust the Y offset as needed for correct sitting position
+            character.object.position.copy(chairModelRef.current.position.clone().add(new THREE.Vector3(0, 20, 0)));
+            character.object.rotation.y = chairModelRef.current.rotation.y;
+          }
+          // Load sitting animation
+          loadModel('/model/Sitting.fbx');
+          return;
+        }
+
         return;
       }
     };
@@ -217,50 +349,68 @@ const Scene = () => {
     // Load models function
     const loadModel = (modelPath: string) => {
       const fbxLoader = new FBXLoader();
-      fbxLoader.load(
-        modelPath,
-        (object) => {
-          if (character.object) {
-            scene.remove(character.object);
-          }
-
-          object.scale.set(0.2, 0.2, 0.2);
-          const prevPosition = character.object ? character.object.position.clone() : new THREE.Vector3(60, 20, 150);
-          const prevRotation = character.object ? character.object.rotation.clone() : new THREE.Euler(0, 0, 0);
-          object.position.copy(prevPosition);
-          object.rotation.copy(prevRotation);
-
-          object.traverse((child) => {
-            if (child instanceof THREE.Mesh) {
-              child.castShadow = true;
-              child.receiveShadow = true;
+      const textureLoader = new THREE.TextureLoader();
+      // Load all PBR textures in parallel
+      Promise.all([
+        textureLoader.loadAsync('/model/texture_diffuse.png'),
+        textureLoader.loadAsync('/model/texture_metallic.png'),
+        textureLoader.loadAsync('/model/texture_roughness.png'),
+        textureLoader.loadAsync('/model/texture_normal.png'),
+      ]).then(([diffuse, metallic, roughness, normal]) => {
+        fbxLoader.load(
+          modelPath,
+          (object) => {
+            if (character.object) {
+              scene.remove(character.object);
             }
-          });
 
-          character.object = object;
-          character.mixer = new THREE.AnimationMixer(object);
-          
-          if (object.animations.length > 0) {
-            const clip = object.animations[0];
-            
-            // Create a new animation clip that removes the root motion
-            const tracks = [];
-            for (let i = 0; i < clip.tracks.length; i++) {
-              const track = clip.tracks[i];
-              // Skip position tracks that affect the root bone
-              if (!track.name.includes('mixamorigHips.position')) {
-                tracks.push(track);
+            object.scale.set(0.007, 0.007, 0.007);
+            const prevPosition = character.object ? character.object.position.clone() : new THREE.Vector3(60, 28, 150);
+            const prevRotation = character.object ? character.object.rotation.clone() : new THREE.Euler(0, 0, 0);
+            object.position.copy(prevPosition);
+            object.rotation.copy(prevRotation);
+
+            // Apply the PBR textures to all meshes
+            object.traverse((child) => {
+              if (child instanceof THREE.Mesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+                child.material = new THREE.MeshStandardMaterial({
+                  map: diffuse,
+                  metalnessMap: metallic,
+                  roughnessMap: roughness,
+                  normalMap: normal,
+                  metalness: 1.0,
+                  roughness: 1.0,
+                });
               }
-            }
-            const staticClip = new THREE.AnimationClip('static_' + clip.name, clip.duration, tracks);
-            
-            const action = character.mixer.clipAction(staticClip);
-            action.play();
-          }
+            });
 
-          scene.add(object);
-        }
-      );
+            character.object = object;
+            character.mixer = new THREE.AnimationMixer(object);
+            
+            if (object.animations.length > 0) {
+              const clip = object.animations[0];
+              
+              // Create a new animation clip that removes the root motion
+              const tracks = [];
+              for (let i = 0; i < clip.tracks.length; i++) {
+                const track = clip.tracks[i];
+                // Skip position tracks that affect the root bone
+                if (!track.name.includes('mixamorigHips.position')) {
+                  tracks.push(track);
+                }
+              }
+              const staticClip = new THREE.AnimationClip('static_' + clip.name, clip.duration, tracks);
+              
+              const action = character.mixer.clipAction(staticClip);
+              action.play();
+            }
+
+            scene.add(object);
+          }
+        );
+      });
     };
 
     // Initial load of standing model
@@ -386,20 +536,34 @@ const Scene = () => {
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
 
+    // Add hemisphere light for soft sky/ground lighting
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+    hemiLight.position.set(0, 200, 0);
+    scene.add(hemiLight);
+
+    // Sun-like directional light
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-    directionalLight.position.set(5, 10, 5);
+    directionalLight.position.set(30, 100, 40);
     directionalLight.castShadow = true;
     directionalLight.shadow.mapSize.width = 2048;
     directionalLight.shadow.mapSize.height = 2048;
     scene.add(directionalLight);
 
+    // Optional: add a point light for highlights
+    const pointLight = new THREE.PointLight(0xffffff, 0.5, 200);
+    pointLight.position.set(0, 50, 50);
+    scene.add(pointLight);
+
     // Ground
-    const groundGeometry = new THREE.PlaneGeometry(500, 500);
+    const groundWidth = 500;
+    const groundDepth = 500;
+    const groundThickness = 10; // Make this as thick as you want
+    const groundGeometry = new THREE.BoxGeometry(groundWidth, groundThickness, groundDepth);
     const groundMaterial = new THREE.MeshPhongMaterial({ color: 0x90EE90 });
     const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = 0;
+    ground.position.y = -groundThickness / 2; // So the top is at y=0
     ground.receiveShadow = true;
+    ground.castShadow = false;
     scene.add(ground);
 
     // Load house
@@ -466,7 +630,7 @@ const Scene = () => {
         const destopModel = gltf2.scene;
         destopModel.name = 'destop';
         destopModel.scale.set(30, 30, 30); // Adjust scale as needed
-        destopModel.position.set(0, 1, -78); // Position near the house
+        destopModel.position.set(0, 0, -78); // Position near the house
         scene.add(destopModel);
         desktopModelRef.current = destopModel;
       });
@@ -475,28 +639,28 @@ const Scene = () => {
         const bedModel = gltf2.scene;
         bedModel.name = 'bed';
         bedModel.scale.set(25, 20, 40); // Adjust scale as needed
-        bedModel.position.set(-78, 1, -45); // Position near the house
+        bedModel.position.set(-78, 0, -45); // Position near the house
         scene.add(bedModel);
         bedModelRef.current = bedModel;
       });
       gltfLoader.load('/house/robot.glb', (gltf2) => {
-        const bedModel = gltf2.scene;
-        bedModel.name = 'robot';
-        bedModel.scale.set(10, 10, 10); // Adjust scale as needed
-        bedModel.position.set(53, 1, -50); // Position near the house
-        bedModel.rotateY(-Math.PI / 4); // Rotate 45 degrees around Y axis
-        scene.add(bedModel);
-        bedModelRef.current = bedModel;
+        const robotModel = gltf2.scene;
+        robotModel.name = 'robot';
+        robotModel.scale.set(10, 10, 10); // Adjust scale as needed
+        robotModel.position.set(53, 0, -50); // Position near the house
+        robotModel.rotateY(-Math.PI / 4); // Rotate 45 degrees around Y axis
+        scene.add(robotModel);
+        robotModelRef.current = robotModel;
       });
 
       gltfLoader.load('/house/showcase.glb', (gltf2) => {
-        const bedModel = gltf2.scene;
-        bedModel.name = 'projectTitle';
-        bedModel.scale.set(15, 15, 15); // Adjust scale as needed
-        bedModel.position.set(53, 60, -50); // Position near the house
-        bedModel.rotateY(-Math.PI / 4); // Rotate 45 degrees around Y axis
-        scene.add(bedModel);
-        bedModelRef.current = bedModel;
+        const showcaseModel = gltf2.scene;
+        showcaseModel.name = 'projectTitle';
+        showcaseModel.scale.set(15, 15, 15); // Adjust scale as needed
+        showcaseModel.position.set(53, 60, -50); // Position near the house
+        showcaseModel.rotateY(-Math.PI / 4); // Rotate 45 degrees around Y axis
+        scene.add(showcaseModel);
+        // Optionally add a showcaseModelRef if needed
       });
 
       if (showStart) {
@@ -522,43 +686,42 @@ const Scene = () => {
       }
 
       gltfLoader.load('/house/projectTitle.glb', (gltf2) => {
-        const bedModel = gltf2.scene;
-        bedModel.name = 'projectTitle';
-        bedModel.scale.set(16, 16, 16); // Adjust scale as needed
-        bedModel.position.set(67, 1, -36); // Position near the house
-        bedModel.rotateY(-Math.PI / 4); // Rotate 45 degrees around Y axis
-        scene.add(bedModel);
-        bedModelRef.current = bedModel;
+        const projectTitleModel = gltf2.scene;
+        projectTitleModel.name = 'projectTitle';
+        projectTitleModel.scale.set(16, 16, 16); // Adjust scale as needed
+        projectTitleModel.position.set(67, 0, -36); // Position near the house
+        projectTitleModel.rotateY(-Math.PI / 4); // Rotate 45 degrees around Y axis
+        scene.add(projectTitleModel);
+        // Optionally add a projectTitleModelRef if needed
       });
 
       gltfLoader.load('/house/eemun.glb', (gltf2) => {
-        const bedModel = gltf2.scene;
-        bedModel.name = 'eemunTitle';
-        bedModel.scale.set(15, 15, 15); // Adjust scale as needed
-        bedModel.position.set(39, 1, -64); // Position near the house
-        bedModel.rotateY(-Math.PI / 4); // Rotate 45 degrees around Y axis
-        scene.add(bedModel);
-        bedModelRef.current = bedModel;
+        const eemunTitleModel = gltf2.scene;
+        eemunTitleModel.name = 'eemunTitle';
+        eemunTitleModel.scale.set(15, 15, 15); // Adjust scale as needed
+        eemunTitleModel.position.set(39, 0, -64); // Position near the house
+        eemunTitleModel.rotateY(-Math.PI / 4); // Rotate 45 degrees around Y axis
+        scene.add(eemunTitleModel);
+        // Optionally add a eemunTitleModelRef if needed
       });
 
       gltfLoader.load('/house/gamingChair.glb', (gltf2) => {
         const chairModel = gltf2.scene;
         chairModel.name = 'chair';
         chairModel.scale.set(20, 20, 20); // Adjust scale as needed
-        chairModel.position.set(0, 1, -50); // Position near the house
+        chairModel.position.set(0, 0, -50); // Position near the house
         chairModel.rotateY(Math.PI);
         scene.add(chairModel);
         chairModelRef.current = chairModel;
       });
       gltfLoader.load('/house/blindbox.glb', (gltf2) => {
-        const chairModel = gltf2.scene;
-        chairModel.name = 'blindbox';
-        chairModel.scale.set(30, 20, 30); // Adjust scale as needed
-        chairModel.position.set(-45, 1, -78); // Position near the house       
-        //chairModel.rotateY(Math.PI);
- 
-        scene.add(chairModel);
-        chairModelRef.current = chairModel;
+        const blindboxModel = gltf2.scene;
+        blindboxModel.name = 'blindbox';
+        blindboxModel.scale.set(30, 20, 30); // Adjust scale as needed
+        blindboxModel.position.set(-45, 1, -78); // Position near the house       
+        //blindboxModel.rotateY(Math.PI);
+        scene.add(blindboxModel);
+        // Optionally add a blindboxModelRef if needed
       });
 
       gltfLoader.load('/house/robot_walk.glb', (gltf2) => {
@@ -640,7 +803,7 @@ const Scene = () => {
         const bedModel = gltf2.scene;
         bedModel.name = 'coffeebar';
         bedModel.scale.set(40, 40, 40); // Adjust scale as needed
-        bedModel.position.set(-60, 1, 40); // Position near the house
+        bedModel.position.set(-60, 0, 40); // Position near the house
         bedModel.rotateY(Math.PI); // Rotate 45 degrees around Y axis
         scene.add(bedModel);
         bedModelRef.current = bedModel;
@@ -776,8 +939,19 @@ const Scene = () => {
         // Check if character is in house (green box)
         if (houseBox && houseBox.containsPoint(nextPosition)) {
           if (!hasTeleportedToCenter) {
-            // Teleport to center of house
-            character.object.position.copy(center);
+            // Teleport both character and poodle to center of inner box
+            const centerPos = center.clone();
+            centerPos.y = 28;
+            character.object.position.copy(centerPos);
+
+            if (poodle.object) {
+              const poodleCenter = center.clone();
+              poodleCenter.y = 10; // Set poodle's y position to -50
+              poodle.object.position.copy(poodleCenter);
+              poodle.targetPosition.copy(poodleCenter); // Update target position to prevent movement
+              poodle.basePosition.copy(poodleCenter); // Update base position for random walk
+            }
+
             isInHouse = true;
             hasTeleportedToCenter = true;
           }
@@ -785,7 +959,7 @@ const Scene = () => {
           isInHouse = false;
           hasTeleportedToCenter = false;
         }
-//In house camera
+
         // Restrict movement to centerBox if in house and not colliding with obstacles
         if (isInHouse && centerBox instanceof THREE.Mesh && !willCollide) {
           // Only allow movement if next position is inside centerBox
@@ -800,50 +974,29 @@ const Scene = () => {
           camera.position.copy(targetCameraPos);
           camera.lookAt(character.object.position);
           controls.target.copy(character.object.position);
-          controls.minDistance = 20;
-          controls.maxDistance = 80;
-          controls.maxPolarAngle = Math.PI / 2;
-          controls.minPolarAngle = Math.PI / 4;
-          (centerBox.material as THREE.MeshBasicMaterial).color.set(0xff0000);
-
-          // Set camera rotation based on movement direction
-          if (character.direction.z > 0) { // Moving down
-            const cameraOffset = new THREE.Vector3(0, 35, -65);
-            const targetCameraPos = character.object.position.clone().add(cameraOffset);
-            camera.position.copy(targetCameraPos);
-            camera.lookAt(character.object.position);
-            controls.target.copy(character.object.position);
-          } else if (character.direction.z < 0) { // Moving up
-            const cameraOffset = new THREE.Vector3(0, 35, 65);
-            const targetCameraPos = character.object.position.clone().add(cameraOffset);
-            camera.position.copy(targetCameraPos);
-            camera.lookAt(character.object.position);
-            controls.target.copy(character.object.position);
-          }
         } else if (!isInHouse && !willCollide) {
           // Normal movement outside house
           character.object.position.copy(nextPosition);
           
           // Update camera position to follow character from behind
           if (character.direction.z > 0) { // Moving down (character facing camera)
-            const cameraOffset = new THREE.Vector3(0, 35, -65); // Increased negative z to position further behind
+            const cameraOffset = new THREE.Vector3(0, 35, -65);
             const targetCameraPos = character.object.position.clone().add(cameraOffset);
             camera.position.copy(targetCameraPos);
             camera.lookAt(character.object.position);
             controls.target.copy(character.object.position);
           } else if (character.direction.z < 0) { // Moving up (character facing away)
-            const cameraOffset = new THREE.Vector3(0, 35, 65); // Increased positive z to position further in front
+            const cameraOffset = new THREE.Vector3(0, 35, 65);
             const targetCameraPos = character.object.position.clone().add(cameraOffset);
             camera.position.copy(targetCameraPos);
             camera.lookAt(character.object.position);
             controls.target.copy(character.object.position);
           } else if (character.direction.x !== 0) { // Moving left/right
-            const cameraOffset = new THREE.Vector3(0, 35, 65); // Increased distance for side views
+            const cameraOffset = new THREE.Vector3(0, 35, 65);
             const targetCameraPos = character.object.position.clone().add(cameraOffset);
             camera.position.copy(targetCameraPos);
             camera.lookAt(character.object.position);
             controls.target.copy(character.object.position);
-            // Set rotation to Math.PI for left/right movement
             if (character.object) {
               character.object.rotation.y = Math.PI;
             }
@@ -859,35 +1012,76 @@ const Scene = () => {
         }
 
         // Poodle movement logic
-        const minPoodleDistance = 15; // Minimum allowed distance between poodle and character
+        const minPoodleDistance = 25; // Minimum allowed distance between poodle and character
+        const maxPoodleDistance = 45; // Maximum distance before poodle starts following
         if (poodle.object && character.object) {
           // Calculate intended next position for poodle
           let poodleNextPos = poodle.object.position.clone();
+          const currentDistance = poodle.object.position.distanceTo(character.object.position);
+          
           if (character.isWalking) {
-            // Poodle follows character
-            poodle.targetPosition.copy(character.object.position).add(new THREE.Vector3(3, -10, 0));
+            // Poodle follows character but maintains distance
+            if (currentDistance > maxPoodleDistance) {
+              // If too far, move closer
+              poodle.targetPosition.copy(character.object.position).add(new THREE.Vector3(3, 0, 0));
+              poodle.targetPosition.y = 10; // Keep y position at 10
+            } else if (currentDistance < minPoodleDistance) {
+              // If too close, move away
+              const awayDirection = poodle.object.position.clone().sub(character.object.position).normalize();
+              poodle.targetPosition.copy(character.object.position).add(awayDirection.multiplyScalar(minPoodleDistance));
+              poodle.targetPosition.y = 10; // Keep y position at 10
+            } else {
+              // Maintain current distance
+              poodle.targetPosition.copy(poodle.object.position);
+            }
           }
+          
           const direction = poodle.targetPosition.clone().sub(poodle.object.position);
           if (direction.length() > 0.1) {
             direction.normalize();
-            const distToChar = poodle.object.position.distanceTo(character.object.position);
-            if (distToChar > minPoodleDistance) {
-              poodleNextPos.add(direction.multiplyScalar(poodle.walkSpeed * delta));
-              // Restrict poodle to centerBox
-              const centerBox = scene.getObjectByName('centerBox');
-              const center = centerBox instanceof THREE.Mesh ? centerBox.position : new THREE.Vector3();
-              const centerSize = new THREE.Vector3(150, 50, 100); // Use the same as your centerBoxSize
-              if (
-                poodleNextPos.distanceTo(character.object.position) >= minPoodleDistance &&
-                Math.abs(poodleNextPos.x - center.x) <= centerSize.x / 2 &&
-                Math.abs(poodleNextPos.y - center.y) <= centerSize.y / 2 &&
-                Math.abs(poodleNextPos.z - center.z) <= centerSize.z / 2
-              ) {
+            poodleNextPos.add(direction.multiplyScalar(poodle.walkSpeed * delta));
+            
+            // Restrict poodle to centerBox with fixed y-value
+            if (isInHouse && centerBox instanceof THREE.Mesh) {
+              // Keep poodle's y position at 10
+              poodleNextPos.y = 10;
+              
+              // Only allow movement if next position is inside centerBox
+              if (Math.abs(poodleNextPos.x - center.x) <= centerSize.x / 2 &&
+                  Math.abs(poodleNextPos.z - center.z) <= centerSize.z / 2) {
                 poodle.object.position.copy(poodleNextPos);
               }
+            } else {
+              // Normal movement outside house
+              poodleNextPos.y = 10; // Keep y position at 10
+              poodle.object.position.copy(poodleNextPos);
             }
+            
             // Make poodle face movement direction
             poodle.object.rotation.y = Math.atan2(direction.x, direction.z);
+          }
+        } else {
+          // Random walk behavior when character is not moving
+          if (poodle.object) {
+            poodle.timeToNewTarget -= delta;
+            
+            // Get new random target position when timer expires or close to current target
+            if (poodle.timeToNewTarget <= 0 || 
+                poodle.object.position.distanceTo(poodle.targetPosition) < 0.5) {
+              poodle.targetPosition.copy(getRandomPosition());
+              poodle.targetPosition.y = 10; // Keep y position at 10
+              poodle.timeToNewTarget = 3 + Math.random() * 2; // Random time between 3-5 seconds
+            }
+
+            // Move towards target position
+            const direction = poodle.targetPosition.clone().sub(poodle.object.position);
+            if (direction.length() > 0.1) {
+              direction.normalize();
+              poodle.object.position.add(direction.multiplyScalar(poodle.walkSpeed * delta));
+              poodle.object.position.y = 10; // Keep y position at 10
+              // Make poodle face movement direction
+              poodle.object.rotation.y = Math.atan2(direction.x, direction.z);
+            }
           }
         }
       } else {
@@ -899,6 +1093,7 @@ const Scene = () => {
           if (poodle.timeToNewTarget <= 0 || 
               poodle.object.position.distanceTo(poodle.targetPosition) < 0.5) {
             poodle.targetPosition.copy(getRandomPosition());
+            poodle.targetPosition.y = 10; // Keep y position at 10
             poodle.timeToNewTarget = 3 + Math.random() * 2; // Random time between 3-5 seconds
           }
 
@@ -907,6 +1102,7 @@ const Scene = () => {
           if (direction.length() > 0.1) {
             direction.normalize();
             poodle.object.position.add(direction.multiplyScalar(poodle.walkSpeed * delta));
+            poodle.object.position.y = 10; // Keep y position at 10
             // Make poodle face movement direction
             poodle.object.rotation.y = Math.atan2(direction.x, direction.z);
           }
