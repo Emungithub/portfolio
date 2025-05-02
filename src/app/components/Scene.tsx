@@ -5,11 +5,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { useThree, useFrame } from '@react-three/fiber';
-import { PerspectiveCamera } from '@react-three/drei';
-import { useGLTF } from '@react-three/drei';
-import { GLTF } from 'three-stdlib';
-import { useRouter } from 'next/navigation';
+
 
 interface ProjectImage {
   file: string;
@@ -906,6 +902,37 @@ const Scene = () => {
           });
         });
       }
+
+      // Load and display /garden/pink_tree.glb
+      gltfLoader.load('/garden/pink_tree.glb', (gltf2) => {
+        const pinkTreeModel = gltf2.scene;
+        pinkTreeModel.name = 'pinkTree';
+        pinkTreeModel.scale.set(20, 20, 20); // Adjust scale as needed
+        pinkTreeModel.position.set(-120, 0, 150); // Place in garden area, adjust as needed
+        scene.add(pinkTreeModel);
+        // Optionally add a ref if you want to manipulate it later
+      });
+
+      // Load and display road stones
+      const fbxLoader = new FBXLoader();
+      fbxLoader.load('/tile/Road_stone_1.fbx', (stone1) => {
+        stone1.name = 'roadStone1';
+        stone1.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
+        stone1.position.set(-100, 0, 100); // Adjust position as needed
+        scene.add(stone1);
+      });
+      fbxLoader.load('/tile/Road_stone_2.fbx', (stone2) => {
+        stone2.name = 'roadStone2';
+        stone2.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
+        stone2.position.set(-90, 0, 110); // Adjust position as needed
+        scene.add(stone2);
+      });
+      fbxLoader.load('/tile/Road_stone_3.fbx', (stone3) => {
+        stone3.name = 'roadStone3';
+        stone3.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
+        stone3.position.set(-80, 0, 120); // Adjust position as needed
+        scene.add(stone3);
+      });
     });
 
     // Camera position
