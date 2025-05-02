@@ -4,6 +4,6 @@ export default function Home() {
   return (
     <main>
       <ClientWrapper />
-    </main>
+      </main>
   );
 }

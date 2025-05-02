@@ -5,6 +5,36 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { useThree, useFrame } from '@react-three/fiber';
+import { PerspectiveCamera } from '@react-three/drei';
+import { useGLTF } from '@react-three/drei';
+import { GLTF } from 'three-stdlib';
+import { useRouter } from 'next/navigation';
+
+interface ProjectImage {
+  file: string;
+  pos: [number, number, number];
+  rotY: number;
+  name: string;
+  url: string;
+}
+
+const projectImages: ProjectImage[] = [
+  {
+    file: '/project1.png',
+    pos: [0, 0, 0],
+    rotY: 0,
+    name: 'Project 1',
+    url: '/project1'
+  },
+  {
+    file: '/project2.png',
+    pos: [0, 0, 0],
+    rotY: 0,
+    name: 'Project 2',
+    url: '/project2'
+  }
+];
 
 const Scene = () => {
   const mountRef = useRef<HTMLDivElement>(null);
