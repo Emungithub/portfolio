@@ -1277,24 +1277,7 @@ const Scene = () => {
         sceneRef.current?.remove(obj);
       }
     });
-    // Add project images if showProjects is true
-    if (showProjects) {
-      const loader = new THREE.TextureLoader();
-      projectImages.forEach(({ file, pos, rotY, name, url }) => {
-        loader.load(file, (texture) => {
-          const imgWidth = 15;
-          const imgHeight = 8;
-          const geometry = new THREE.PlaneGeometry(imgWidth, imgHeight);
-          const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
-          const imagePlane = new THREE.Mesh(geometry, material);
-          imagePlane.position.set(...pos);
-          imagePlane.rotation.y = rotY;
-          imagePlane.name = name;
-          imagePlane.userData.url = url;
-          sceneRef.current?.add(imagePlane);
-        });
-      });
-    }
+
   }, [showProjects]);
 
   // Add this useEffect for start/pause models:
