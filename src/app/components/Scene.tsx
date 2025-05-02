@@ -20,20 +20,14 @@ interface ProjectImage {
 }
 
 const projectImages: ProjectImage[] = [
-  {
-    file: '/project1.png',
-    pos: [0, 0, 0],
-    rotY: 0,
-    name: 'Project 1',
-    url: '/project1'
-  },
-  {
-    file: '/project2.png',
-    pos: [0, 0, 0],
-    rotY: 0,
-    name: 'Project 2',
-    url: '/project2'
-  }
+  { file: '/portfolio/project2.png', pos: [36, 50, -60], rotY: -Math.PI / 4, name: 'HackSplit', url: 'https://eemunportfolio.vercel.app/' },
+  { file: '/portfolio/project3.png', pos: [36, 40, -60], rotY: -Math.PI / 4, name: 'PawChain', url: 'https://eemunportfolio.vercel.app/' },
+  { file: '/portfolio/project1.png', pos: [36, 30, -60], rotY: -Math.PI / 4, name: 'Graphic Programming', url: 'https://eemunportfolio.vercel.app/' },
+  { file: '/portfolio/project1.png', pos: [48, 50, -48], rotY: -Math.PI / 4, name: 'Java', url: 'https://eemunportfolio.vercel.app/' },
+  { file: '/portfolio/project1.png', pos: [48, 30, -48], rotY: -Math.PI / 4, name: 'Mixue', url: 'https://eemunportfolio.vercel.app/' },
+  { file: '/portfolio/project1.png', pos: [60, 50, -36], rotY: -Math.PI / 4, name: 'TravelConnect', url: 'https://eemunportfolio.vercel.app/' },
+  { file: '/portfolio/project1.png', pos: [60, 40, -36], rotY: -Math.PI / 4, name: 'Recycle_Reward_System', url: 'https://eemunportfolio.vercel.app/' },
+  { file: '/portfolio/project1.png', pos: [60, 30, -36], rotY: -Math.PI / 4, name: 'CureMeBaby', url: 'https://eemunportfolio.vercel.app/' },
 ];
 
 const Scene = () => {
@@ -893,17 +887,6 @@ const Scene = () => {
         imagePlane.name = 'project1Image';
         scene.add(imagePlane);
       });
-
-      const projectImages = [
-        { file: '/portfolio/project2.png', pos: [36, 50, -60] as [number, number, number], rotY: -Math.PI / 4, name: 'HackSplit', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project3.png', pos: [36, 40, -60] as [number, number, number], rotY: -Math.PI / 4, name: 'PawChain', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [36, 30, -60] as [number, number, number], rotY: -Math.PI / 4, name: 'Graphic Programming', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [48, 50, -48] as [number, number, number], rotY: -Math.PI / 4, name: 'Java', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [48, 30, -48] as [number, number, number], rotY: -Math.PI / 4, name: 'Mixue', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [60, 50, -36] as [number, number, number], rotY: -Math.PI / 4, name: 'TravelConnect', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [60, 40, -36] as [number, number, number], rotY: -Math.PI / 4, name: 'Recycle_Reward_System', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [60, 30, -36] as [number, number, number], rotY: -Math.PI / 4, name: 'CureMeBaby', url: 'https://eemunportfolio.vercel.app/' },
-      ];
 
       // Only add project images if showProjects is true
       if (showProjects) {
