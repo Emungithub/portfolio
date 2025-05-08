@@ -913,26 +913,61 @@ const Scene = () => {
         // Optionally add a ref if you want to manipulate it later
       });
 
+      gltfLoader.load('/garden/pink_tree.glb', (gltf2) => {
+        const pinkTreeModel = gltf2.scene;
+        pinkTreeModel.name = 'pinkTree';
+        pinkTreeModel.scale.set(20, 20, 20); // Adjust scale as needed
+        pinkTreeModel.position.set(120, 0, 150); // Place in garden area, adjust as needed
+        scene.add(pinkTreeModel);
+        // Optionally add a ref if you want to manipulate it later
+      });
+
       // Load and display road stones
       const fbxLoader = new FBXLoader();
       fbxLoader.load('/tile/Road_stone_1.fbx', (stone1) => {
         stone1.name = 'roadStone1';
         stone1.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
-        stone1.position.set(-100, 0, 100); // Adjust position as needed
+        stone1.position.set(100, 0, 200); // Adjust position as needed
         scene.add(stone1);
       });
-      fbxLoader.load('/tile/Road_stone_2.fbx', (stone2) => {
-        stone2.name = 'roadStone2';
-        stone2.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
-        stone2.position.set(-90, 0, 110); // Adjust position as needed
-        scene.add(stone2);
+      
+      fbxLoader.load('/tile/Road_wood_1.fbx', (stone1) => {
+        stone1.name = 'roadStone1';
+        stone1.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
+        stone1.position.set(-100, 0, 200); // Adjust position as needed
+        scene.add(stone1);
       });
-      fbxLoader.load('/tile/Road_stone_3.fbx', (stone3) => {
-        stone3.name = 'roadStone3';
-        stone3.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
-        stone3.position.set(-80, 0, 120); // Adjust position as needed
-        scene.add(stone3);
+
+      fbxLoader.load('/tile/Road_breek_1.fbx', (stone1) => {
+        stone1.name = 'roadStone1';
+        stone1.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
+        stone1.position.set(0, 0, 200); // Adjust position as needed
+        stone1.rotation.y = Math.PI / 2; // Rotate 90 degrees around Y axis
+        scene.add(stone1);
       });
+
+      fbxLoader.load('/tile/Fense_1.fbx', (stone1) => {
+        stone1.name = 'roadStone1';
+        stone1.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
+        stone1.position.set(0, 0, 200); // Adjust position as needed
+        stone1.rotation.y = Math.PI / 2; // Rotate 90 degrees around Y axis
+        scene.add(stone1);
+      });
+      fbxLoader.load('/tile/bench.fbx', (stone1) => {
+        stone1.name = 'roadStone1';
+        stone1.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
+        stone1.position.set(0, 0, 200); // Adjust position as needed
+        stone1.rotation.y = Math.PI / 2; // Rotate 90 degrees around Y axis
+        scene.add(stone1);
+      });
+      fbxLoader.load('/tile/Lamp_1.fbx', (stone1) => {
+        stone1.name = 'roadStone1';
+        stone1.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
+        stone1.position.set(0, 0, 200); // Adjust position as needed
+        stone1.rotation.y = Math.PI / 2; // Rotate 90 degrees around Y axis
+        scene.add(stone1);
+      });
+     
     });
 
     // Camera position
