@@ -24,6 +24,7 @@ const Scene = () => {
   const [showButton, setShowButton] = useState(false);
   const [buttonPosition, setButtonPosition] = useState({ x: 0, y: 0 });
   const [isMounted, setIsMounted] = useState(false);
+  const [isInInnerBox, setIsInInnerBox] = useState(false);
   const houseModelRef = useRef<THREE.Object3D | null>(null);
   const houseBoxRef = useRef<THREE.BoxHelper | null>(null);
   const desktopModelRef = useRef<THREE.Object3D | null>(null);
@@ -41,6 +42,22 @@ const Scene = () => {
   const [showPause, setShowPause] = useState(false);
   const startModelRef = useRef<THREE.Object3D | null>(null);
   const pauseModelRef = useRef<THREE.Object3D | null>(null);
+  const aboutMeTextureRef = useRef<THREE.CanvasTexture | null>(null);
+  const characterRef = useRef<{
+    object: THREE.Object3D | null;
+    mixer: THREE.AnimationMixer | null;
+    isWalking: boolean;
+    walkSpeed: number;
+    direction: THREE.Vector3;
+  }>({
+    object: null,
+    mixer: null,
+    isWalking: false,
+    walkSpeed: 30,
+    direction: new THREE.Vector3(0, 0, 0),
+  });
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const controlsRef = useRef<OrbitControls | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -59,6 +76,7 @@ const Scene = () => {
     sceneRef.current = scene;
     scene.background = new THREE.Color(0x1a1a1a);
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    cameraRef.current = camera;
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     rendererRef.current = renderer;
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -106,20 +124,22 @@ const Scene = () => {
           setIsCameraLockedToChat(newShowRobotScreen);
 
           // Camera animation logic
-          if (robotScreenRef.current) {
+          if (robotScreenRef.current && cameraRef.current && controlsRef.current) {
             if (newShowRobotScreen) {
               // Opening: move camera to view screen
               const screenPosition = robotScreenRef.current.position.clone();
               const cameraOffset = new THREE.Vector3(-20, 5, 20);
               const targetCameraPos = screenPosition.clone().add(cameraOffset);
-              const startPos = camera.position.clone();
-              const startRot = camera.rotation.clone();
+              const startPos = cameraRef.current.position.clone();
+              const startRot = cameraRef.current.rotation.clone();
               const endRot = new THREE.Euler();
-              camera.position.copy(targetCameraPos);
-              camera.lookAt(screenPosition);
-              endRot.copy(camera.rotation);
-              camera.position.copy(startPos);
-              camera.rotation.copy(startRot);
+              cameraRef.current.position.copy(targetCameraPos);
+              cameraRef.current.lookAt(screenPosition);
+              endRot.copy(cameraRef.current.rotation);
+              cameraRef.current.position.copy(startPos);
+              cameraRef.current.rotation.copy(startRot);
+
+              // Animate camera movement
               const duration = 1000;
               const startTime = Date.now();
               const animateCamera = () => {
@@ -128,55 +148,64 @@ const Scene = () => {
                 const progress = Math.min(elapsed / duration, 1);
                 const ease = (t: number) => t * t * (3 - 2 * t);
                 const t = ease(progress);
-                camera.position.lerpVectors(startPos, targetCameraPos, t);
-                camera.rotation.x = startRot.x + (endRot.x - startRot.x) * t;
-                camera.rotation.y = startRot.y + (endRot.y - startRot.y) * t;
-                camera.rotation.z = startRot.z + (endRot.z - startRot.z) * t;
+                cameraRef.current?.position.lerpVectors(startPos, targetCameraPos, t);
+                if (cameraRef.current) {
+                  cameraRef.current.rotation.x = startRot.x + (endRot.x - startRot.x) * t;
+                  cameraRef.current.rotation.y = startRot.y + (endRot.y - startRot.y) * t;
+                  cameraRef.current.rotation.z = startRot.z + (endRot.z - startRot.z) * t;
+                }
                 if (progress < 1) {
                   requestAnimationFrame(animateCamera);
                 }
               };
               animateCamera();
-              controls.target.copy(screenPosition);
-              controls.minDistance = 30;
-              controls.maxDistance = 50;
-              controls.update();
+              controlsRef.current.target.copy(screenPosition);
+              controlsRef.current.minDistance = 30;
+              controlsRef.current.maxDistance = 50;
+              controlsRef.current.update();
             } else {
-              // Closing: move camera to character model
-              let charPos = new THREE.Vector3(0, 0, 0);
-              if (character && character.object) {
-                charPos = character.object.position.clone();
+              // Closing: move camera back to character position
+              if (characterRef.current.object) {
+                const charPos = characterRef.current.object.position.clone();
+                const cameraOffset = new THREE.Vector3(0, 35, 65);
+                const targetCameraPos = charPos.clone().add(cameraOffset);
+                const startPos = cameraRef.current.position.clone();
+                const startRot = cameraRef.current.rotation.clone();
+
+                // Set up lookAt rotation
+                cameraRef.current.position.copy(targetCameraPos);
+                cameraRef.current.lookAt(charPos);
+                const endRot = cameraRef.current.rotation.clone();
+                cameraRef.current.position.copy(startPos);
+                cameraRef.current.rotation.copy(startRot);
+
+                // Animate camera movement
+                const duration = 1000;
+                const startTime = Date.now();
+                const animateCamera = () => {
+                  const now = Date.now();
+                  const elapsed = now - startTime;
+                  const progress = Math.min(elapsed / duration, 1);
+                  const ease = (t: number) => t * t * (3 - 2 * t);
+                  const t = ease(progress);
+                  cameraRef.current?.position.lerpVectors(startPos, targetCameraPos, t);
+                  if (cameraRef.current) {
+                    cameraRef.current.rotation.x = startRot.x + (endRot.x - startRot.x) * t;
+                    cameraRef.current.rotation.y = startRot.y + (endRot.y - startRot.y) * t;
+                    cameraRef.current.rotation.z = startRot.z + (endRot.z - startRot.z) * t;
+                  }
+                  if (progress < 1) {
+                    requestAnimationFrame(animateCamera);
+                  }
+                };
+                animateCamera();
+
+                // Update controls to target the character
+                controlsRef.current.target.copy(charPos);
+                controlsRef.current.minDistance = 0;
+                controlsRef.current.maxDistance = Infinity;
+                controlsRef.current.update();
               }
-              const cameraOffset = new THREE.Vector3(0, 35, 65); // Use same offset as when following character
-              const targetCameraPos = charPos.clone().add(cameraOffset);
-              const startPos = camera.position.clone();
-              const startRot = camera.rotation.clone();
-              camera.position.copy(targetCameraPos);
-              camera.lookAt(charPos);
-              const endRot = camera.rotation.clone();
-              camera.position.copy(startPos);
-              camera.rotation.copy(startRot);
-              const duration = 1000;
-              const startTime = Date.now();
-              const animateCamera = () => {
-                const now = Date.now();
-                const elapsed = now - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                const ease = (t: number) => t * t * (3 - 2 * t);
-                const t = ease(progress);
-                camera.position.lerpVectors(startPos, targetCameraPos, t);
-                camera.rotation.x = startRot.x + (endRot.x - startRot.x) * t;
-                camera.rotation.y = startRot.y + (endRot.y - startRot.y) * t;
-                camera.rotation.z = startRot.z + (endRot.z - startRot.z) * t;
-                if (progress < 1) {
-                  requestAnimationFrame(animateCamera);
-                }
-              };
-              animateCamera();
-              controls.target.copy(charPos);
-              controls.minDistance = 0;
-              controls.maxDistance = Infinity;
-              controls.update();
             }
           }
           return newShowRobotScreen;
@@ -202,8 +231,7 @@ const Scene = () => {
         if (projectorScreen) {
           // Target position: a bit in front of the screen, slightly above
           const screenPos = projectorScreen.position.clone();
-          const cameraOffset = new THREE.Vector3(0, 0, 45); // 60 units in front of the screen
-          // Rotate offset by the screen's rotation
+          const cameraOffset = new THREE.Vector3(0, 0, 45);
           cameraOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), projectorScreen.rotation.y);
           const targetCameraPos = screenPos.clone().add(cameraOffset);
           const startPos = camera.position.clone();
@@ -236,10 +264,12 @@ const Scene = () => {
           animateCamera();
 
           // Update controls to target the screen
-          controls.target.copy(screenPos);
-          controls.minDistance = 30;
-          controls.maxDistance = 80;
-          controls.update();
+          if (controlsRef.current) {
+            controlsRef.current.target.copy(screenPos);
+            controlsRef.current.minDistance = 30;
+            controlsRef.current.maxDistance = 80;
+            controlsRef.current.update();
+          }
         }
         return;
       }
@@ -258,8 +288,8 @@ const Scene = () => {
         setShowPause(false);
 
         // Move camera back to character position
-        if (character.object) {
-          const charPos = character.object.position.clone();
+        if (characterRef.current.object) {
+          const charPos = characterRef.current.object.position.clone();
           const cameraOffset = new THREE.Vector3(0, 35, 65); // Use same offset as when following character
           const targetCameraPos = charPos.clone().add(cameraOffset);
           const startPos = camera.position.clone();
@@ -292,10 +322,12 @@ const Scene = () => {
           animateCamera();
 
           // Update controls to target the character
-          controls.target.copy(charPos);
-          controls.minDistance = 0;
-          controls.maxDistance = Infinity;
-          controls.update();
+          if (controlsRef.current) {
+            controlsRef.current.target.copy(charPos);
+            controlsRef.current.minDistance = 0;
+            controlsRef.current.maxDistance = Infinity;
+            controlsRef.current.update();
+          }
         }
 
         // Check for bed.glb click
@@ -311,10 +343,10 @@ const Scene = () => {
         });
         if (bedClicked) {
           // Move character to bed and play sitting animation
-          if (bedModelRef.current && character.object) {
+          if (bedModelRef.current && characterRef.current.object) {
             // Move character to bed position (adjust y as needed for correct sitting position)
-            character.object.position.copy(bedModelRef.current.position.clone().add(new THREE.Vector3(0, 20, 0)));
-            character.object.rotation.y = bedModelRef.current.rotation.y;
+            characterRef.current.object.position.copy(bedModelRef.current.position.clone().add(new THREE.Vector3(0, 20, 0)));
+            characterRef.current.object.rotation.y = bedModelRef.current.rotation.y;
           }
           // Load sitting animation
           loadModel('/model/Sitting.fbx');
@@ -332,10 +364,10 @@ const Scene = () => {
         });
         if (chairClicked) {
           // Move character to chair and play sitting animation
-          if (chairModelRef.current && character.object) {
+          if (chairModelRef.current && characterRef.current.object) {
             // Adjust the Y offset as needed for correct sitting position
-            character.object.position.copy(chairModelRef.current.position.clone().add(new THREE.Vector3(0, 20, 0)));
-            character.object.rotation.y = chairModelRef.current.rotation.y;
+            characterRef.current.object.position.copy(chairModelRef.current.position.clone().add(new THREE.Vector3(0, 20, 0)));
+            characterRef.current.object.rotation.y = chairModelRef.current.rotation.y;
           }
           // Load sitting animation
           loadModel('/model/Sitting.fbx');
@@ -371,13 +403,13 @@ const Scene = () => {
         fbxLoader.load(
           modelPath,
           (object) => {
-            if (character.object) {
-              scene.remove(character.object);
+            if (characterRef.current.object) {
+              scene.remove(characterRef.current.object);
             }
 
             object.scale.set(0.007, 0.007, 0.007);
-            const prevPosition = character.object ? character.object.position.clone() : new THREE.Vector3(60, 28, 150);
-            const prevRotation = character.object ? character.object.rotation.clone() : new THREE.Euler(0, 0, 0);
+            const prevPosition = characterRef.current.object ? characterRef.current.object.position.clone() : new THREE.Vector3(60, 28, 150);
+            const prevRotation = characterRef.current.object ? characterRef.current.object.rotation.clone() : new THREE.Euler(0, 0, 0);
             object.position.copy(prevPosition);
             object.rotation.copy(prevRotation);
 
@@ -397,8 +429,8 @@ const Scene = () => {
               }
             });
 
-            character.object = object;
-            character.mixer = new THREE.AnimationMixer(object);
+            characterRef.current.object = object;
+            characterRef.current.mixer = new THREE.AnimationMixer(object);
             
             if (object.animations.length > 0) {
               const clip = object.animations[0];
@@ -414,7 +446,7 @@ const Scene = () => {
               }
               const staticClip = new THREE.AnimationClip('static_' + clip.name, clip.duration, tracks);
               
-              const action = character.mixer.clipAction(staticClip);
+              const action = characterRef.current.mixer.clipAction(staticClip);
               action.play();
             }
 
@@ -488,27 +520,27 @@ const Scene = () => {
         event.preventDefault();
       }
 
-      if (!character.isWalking) {
-        character.isWalking = true;
+      if (!characterRef.current.isWalking) {
+        characterRef.current.isWalking = true;
         loadModel('/model/Walking.fbx');
       }
 
       switch (event.key) {
         case 'ArrowUp':
-          character.direction.z = -1;
-          if (character.object) character.object.rotation.y = Math.PI;
+          characterRef.current.direction.z = -1;
+          if (characterRef.current.object) characterRef.current.object.rotation.y = Math.PI;
           break;
         case 'ArrowDown':
-          character.direction.z = 1;
-          if (character.object) character.object.rotation.y = 0;
+          characterRef.current.direction.z = 1;
+          if (characterRef.current.object) characterRef.current.object.rotation.y = 0;
           break;
         case 'ArrowLeft':
-          character.direction.x = -1;
-          if (character.object) character.object.rotation.y = -Math.PI / 2;
+          characterRef.current.direction.x = -1;
+          if (characterRef.current.object) characterRef.current.object.rotation.y = -Math.PI / 2;
           break;
         case 'ArrowRight':
-          character.direction.x = 1;
-          if (character.object) character.object.rotation.y = Math.PI / 2;
+          characterRef.current.direction.x = 1;
+          if (characterRef.current.object) characterRef.current.object.rotation.y = Math.PI / 2;
           break;
       }
     };
@@ -517,17 +549,17 @@ const Scene = () => {
       switch (event.key) {
         case 'ArrowUp':
         case 'ArrowDown':
-          character.direction.z = 0;
+          characterRef.current.direction.z = 0;
           break;
         case 'ArrowLeft':
         case 'ArrowRight':
-          character.direction.x = 0;
+          characterRef.current.direction.x = 0;
           break;
       }
 
       // If no keys are pressed, stop walking
-      if (character.direction.x === 0 && character.direction.z === 0) {
-        character.isWalking = false;
+      if (characterRef.current.direction.x === 0 && characterRef.current.direction.z === 0) {
+        characterRef.current.isWalking = false;
         loadModel('/model/Standing.fbx');
       }
     };
@@ -537,6 +569,7 @@ const Scene = () => {
 
     // Controls
     const controls = new OrbitControls(camera, renderer.domElement);
+    controlsRef.current = controls;
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.screenSpacePanning = true;
@@ -985,32 +1018,17 @@ const Scene = () => {
       const delta = clock.getDelta();
 
       // Update character movement and animation
-      if (character.isWalking && character.object) {
-        const moveDistance = character.walkSpeed * delta;
-        let nextPosition = character.object.position.clone();
-        nextPosition.x += character.direction.x * moveDistance;
-        nextPosition.z += character.direction.z * moveDistance;
+      if (characterRef.current.isWalking && characterRef.current.object) {
+        const moveDistance = characterRef.current.walkSpeed * delta;
+        let nextPosition = characterRef.current.object.position.clone();
+        nextPosition.x += characterRef.current.direction.x * moveDistance;
+        nextPosition.z += characterRef.current.direction.z * moveDistance;
 
         // Get references to boxes
         const houseBox = houseModelRef.current ? new THREE.Box3().setFromObject(houseModelRef.current) : null;
         const centerBox = scene.getObjectByName('centerBox');
         const center = centerBox instanceof THREE.Mesh ? centerBox.position : new THREE.Vector3();
-        //Inner box 
-        const centerSize = new THREE.Vector3(150, 50, 100); // Use the same as centerBoxSize
-
-        // Check for collision with obstacles
-        let willCollide = false;
-        const charBox = new THREE.Box3().setFromCenterAndSize(nextPosition, new THREE.Vector3(10, 40, 10));
-        const obstacles = [desktopModelRef.current, bedModelRef.current, chairModelRef.current];
-        for (const obj of obstacles) {
-          if (obj) {
-            const objBox = new THREE.Box3().setFromObject(obj);
-            if (objBox.intersectsBox(charBox)) {
-              willCollide = true;
-              break;
-            }
-          }
-        }
+        const centerSize = new THREE.Vector3(150, 50, 100);
 
         // Check if character is in house (green box)
         if (houseBox && houseBox.containsPoint(nextPosition)) {
@@ -1018,14 +1036,15 @@ const Scene = () => {
             // Teleport both character and poodle to center of inner box
             const centerPos = center.clone();
             centerPos.y = 28;
-            character.object.position.copy(centerPos);
+            characterRef.current.object.position.copy(centerPos);
+            setIsInInnerBox(true);
 
             if (poodle.object) {
               const poodleCenter = center.clone();
-              poodleCenter.y = 10; // Set poodle's y position to -50
+              poodleCenter.y = 10;
               poodle.object.position.copy(poodleCenter);
-              poodle.targetPosition.copy(poodleCenter); // Update target position to prevent movement
-              poodle.basePosition.copy(poodleCenter); // Update base position for random walk
+              poodle.targetPosition.copy(poodleCenter);
+              poodle.basePosition.copy(poodleCenter);
             }
 
             isInHouse = true;
@@ -1034,83 +1053,97 @@ const Scene = () => {
         } else {
           isInHouse = false;
           hasTeleportedToCenter = false;
+          setIsInInnerBox(false);
         }
 
         // Restrict movement to centerBox if in house and not colliding with obstacles
-        if (isInHouse && centerBox instanceof THREE.Mesh && !willCollide) {
+        if (isInHouse && centerBox instanceof THREE.Mesh) {
           // Only allow movement if next position is inside centerBox
           if (Math.abs(nextPosition.x - center.x) <= centerSize.x / 2 &&
               Math.abs(nextPosition.y - center.y) <= centerSize.y / 2 &&
               Math.abs(nextPosition.z - center.z) <= centerSize.z / 2) {
-            character.object.position.copy(nextPosition);
+            characterRef.current.object.position.copy(nextPosition);
           }
           // Camera and color logic for being inside the center box
           const cameraOffset = new THREE.Vector3(0, 35, -65);
-          const targetCameraPos = character.object.position.clone().add(cameraOffset);
-          camera.position.copy(targetCameraPos);
-          camera.lookAt(character.object.position);
-          controls.target.copy(character.object.position);
-          
-          // Limit camera zoom when inside the inner box
-          controls.minDistance = 30; // Minimum zoom distance
-          controls.maxDistance = 80; // Maximum zoom distance
-          controls.update();
-        } else if (!isInHouse && !willCollide) {
+          const targetCameraPos = characterRef.current.object.position.clone().add(cameraOffset);
+          if (cameraRef.current) {
+            cameraRef.current.position.copy(targetCameraPos);
+            cameraRef.current.lookAt(characterRef.current.object.position);
+          }
+          if (controlsRef.current) {
+            controlsRef.current.target.copy(characterRef.current.object.position);
+            controlsRef.current.minDistance = 30;
+            controlsRef.current.maxDistance = 80;
+            controlsRef.current.update();
+          }
+        } else if (!isInHouse) {
           // Normal movement outside house
-          character.object.position.copy(nextPosition);
+          characterRef.current.object.position.copy(nextPosition);
           
           // Update camera position to follow character from behind
-          if (character.direction.z > 0) { // Moving down (character facing camera)
+          if (characterRef.current.direction.z > 0) { // Moving down (character facing camera)
             const cameraOffset = new THREE.Vector3(0, 35, -65);
-            const targetCameraPos = character.object.position.clone().add(cameraOffset);
-            camera.position.copy(targetCameraPos);
-            camera.lookAt(character.object.position);
-            controls.target.copy(character.object.position);
-          } else if (character.direction.z < 0) { // Moving up (character facing away)
+            const targetCameraPos = characterRef.current.object.position.clone().add(cameraOffset);
+            if (cameraRef.current) {
+              cameraRef.current.position.copy(targetCameraPos);
+              cameraRef.current.lookAt(characterRef.current.object.position);
+            }
+            if (controlsRef.current) {
+              controlsRef.current.target.copy(characterRef.current.object.position);
+            }
+          } else if (characterRef.current.direction.z < 0) { // Moving up (character facing away)
             const cameraOffset = new THREE.Vector3(0, 35, 65);
-            const targetCameraPos = character.object.position.clone().add(cameraOffset);
-            camera.position.copy(targetCameraPos);
-            camera.lookAt(character.object.position);
-            controls.target.copy(character.object.position);
-          } else if (character.direction.x !== 0) { // Moving left/right
+            const targetCameraPos = characterRef.current.object.position.clone().add(cameraOffset);
+            if (cameraRef.current) {
+              cameraRef.current.position.copy(targetCameraPos);
+              cameraRef.current.lookAt(characterRef.current.object.position);
+            }
+            if (controlsRef.current) {
+              controlsRef.current.target.copy(characterRef.current.object.position);
+            }
+          } else if (characterRef.current.direction.x !== 0) { // Moving left/right
             const cameraOffset = new THREE.Vector3(0, 35, 65);
-            const targetCameraPos = character.object.position.clone().add(cameraOffset);
-            camera.position.copy(targetCameraPos);
-            camera.lookAt(character.object.position);
-            controls.target.copy(character.object.position);
-            if (character.object) {
-              character.object.rotation.y = Math.PI;
+            const targetCameraPos = characterRef.current.object.position.clone().add(cameraOffset);
+            if (cameraRef.current) {
+              cameraRef.current.position.copy(targetCameraPos);
+              cameraRef.current.lookAt(characterRef.current.object.position);
+            }
+            if (controlsRef.current) {
+              controlsRef.current.target.copy(characterRef.current.object.position);
+            }
+            if (characterRef.current.object) {
+              characterRef.current.object.rotation.y = Math.PI;
             }
           }
           
           // Reset camera zoom limits when outside
-          controls.minDistance = 0;
-          controls.maxDistance = Infinity;
-          controls.maxPolarAngle = Math.PI;
-          controls.minPolarAngle = 0;
-          if (centerBox instanceof THREE.Mesh) {
-            (centerBox.material as THREE.MeshBasicMaterial).color.set(0x0000ff);
+          if (controlsRef.current) {
+            controlsRef.current.minDistance = 0;
+            controlsRef.current.maxDistance = Infinity;
+            controlsRef.current.maxPolarAngle = Math.PI;
+            controlsRef.current.minPolarAngle = 0;
           }
         }
 
         // Poodle movement logic
         const minPoodleDistance = 25; // Minimum allowed distance between poodle and character
         const maxPoodleDistance = 45; // Maximum distance before poodle starts following
-        if (poodle.object && character.object) {
+        if (poodle.object && characterRef.current.object) {
           // Calculate intended next position for poodle
           let poodleNextPos = poodle.object.position.clone();
-          const currentDistance = poodle.object.position.distanceTo(character.object.position);
+          const currentDistance = poodle.object.position.distanceTo(characterRef.current.object.position);
           
-          if (character.isWalking) {
+          if (characterRef.current.isWalking) {
             // Poodle follows character but maintains distance
             if (currentDistance > maxPoodleDistance) {
               // If too far, move closer
-              poodle.targetPosition.copy(character.object.position).add(new THREE.Vector3(3, 0, 0));
+              poodle.targetPosition.copy(characterRef.current.object.position).add(new THREE.Vector3(3, 0, 0));
               poodle.targetPosition.y = 10; // Keep y position at 10
             } else if (currentDistance < minPoodleDistance) {
               // If too close, move away
-              const awayDirection = poodle.object.position.clone().sub(character.object.position).normalize();
-              poodle.targetPosition.copy(character.object.position).add(awayDirection.multiplyScalar(minPoodleDistance));
+              const awayDirection = poodle.object.position.clone().sub(characterRef.current.object.position).normalize();
+              poodle.targetPosition.copy(characterRef.current.object.position).add(awayDirection.multiplyScalar(minPoodleDistance));
               poodle.targetPosition.y = 10; // Keep y position at 10
             } else {
               // Maintain current distance
@@ -1192,8 +1225,8 @@ const Scene = () => {
       }
 
       // Update animations
-      if (character.mixer) {
-        character.mixer.update(delta);
+      if (characterRef.current.mixer) {
+        characterRef.current.mixer.update(delta);
       }
       if (poodle.mixer) {
         poodle.mixer.update(delta);
@@ -1205,22 +1238,26 @@ const Scene = () => {
       // If camera is locked to chat view, ensure it maintains the correct position
       if (isCameraLockedToChat && robotScreenRef.current) {
         const screenPosition = robotScreenRef.current.position.clone();
-        controls.target.copy(screenPosition);
-        
-        // Limit camera movement while chatting
-        controls.minDistance = 30;
-        controls.maxDistance = 50;
-        controls.minPolarAngle = Math.PI / 4; // Limit vertical rotation
-        controls.maxPolarAngle = Math.PI / 2;
+        if (controlsRef.current) {
+          controlsRef.current.target.copy(screenPosition);
+          controlsRef.current.minDistance = 30;
+          controlsRef.current.maxDistance = 50;
+          controlsRef.current.minPolarAngle = Math.PI / 4;
+          controlsRef.current.maxPolarAngle = Math.PI / 2;
+        }
       } else {
         // Normal camera controls when not chatting
-        controls.minDistance = 0;
-        controls.maxDistance = Infinity;
-        controls.minPolarAngle = 0;
-        controls.maxPolarAngle = Math.PI;
+        if (controlsRef.current) {
+          controlsRef.current.minDistance = 0;
+          controlsRef.current.maxDistance = Infinity;
+          controlsRef.current.minPolarAngle = 0;
+          controlsRef.current.maxPolarAngle = Math.PI;
+        }
       }
 
-      controls.update();
+      if (controlsRef.current) {
+        controlsRef.current.update();
+      }
       renderer.render(scene, camera);
     };
 
@@ -1266,8 +1303,8 @@ const Scene = () => {
       }
 
       // Stop animations
-      if (character.mixer) {
-        character.mixer.stopAllAction();
+      if (characterRef.current.mixer) {
+        characterRef.current.mixer.stopAllAction();
       }
       if (poodle.mixer) {
         poodle.mixer.stopAllAction();
@@ -1277,8 +1314,8 @@ const Scene = () => {
       }
 
       // Dispose of controls
-      if (controls) {
-        controls.dispose();
+      if (controlsRef.current) {
+        controlsRef.current.dispose();
       }
 
       // Clear the mount point
@@ -1346,9 +1383,400 @@ const Scene = () => {
     }
   }, [showStart, showPause]);
 
+  // Function to create AboutMe texture
+  const createAboutMeTexture = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 768;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    // Set background
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Set text styles
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    
+    // Title
+    ctx.font = 'bold 48px Arial';
+    ctx.fillText('Leong Ee Mun', canvas.width / 2, 80);
+
+    // About text
+    ctx.font = '24px Arial';
+    ctx.textAlign = 'left';
+    const text = [
+      "Hello, I'm Ee Mun Leong, a passionate developer with a creative mindset. I specialize in building dynamic, interactive web experiences using modern technologies like React, Next.js, Node.js, and Three.js. My approach combines technical expertise with a strong sense of design, resulting in projects that are both visually appealing and highly functional.",
+      "I enjoy solving complex problems, learning new technologies, and collaborating on innovative projects. Whether it's developing web applications, creating 3D animations, or designing user interfaces, I strive to deliver work that exceeds expectations.",
+      "Feel free to explore my projects below or get in touch if you'd like to collaborate!"
+    ];
+
+    const lineHeight = 32;
+    const margin = 50;
+    const maxWidth = canvas.width - (margin * 2);
+
+    text.forEach((paragraph, index) => {
+      const words = paragraph.split(' ');
+      let line = '';
+      let y = 150 + (index * 200);
+
+      words.forEach(word => {
+        const testLine = line + word + ' ';
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > maxWidth && line !== '') {
+          ctx.fillText(line, margin, y);
+          line = word + ' ';
+          y += lineHeight;
+        } else {
+          line = testLine;
+        }
+      });
+      ctx.fillText(line, margin, y);
+    });
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
+  };
+
+  // Update the robot screen material when showRobotScreen changes
+  useEffect(() => {
+    if (robotScreenRef.current) {
+      if (showRobotScreen) {
+        if (!aboutMeTextureRef.current) {
+          aboutMeTextureRef.current = createAboutMeTexture();
+        }
+        if (aboutMeTextureRef.current) {
+          (robotScreenRef.current.material as THREE.MeshStandardMaterial).map = aboutMeTextureRef.current;
+          (robotScreenRef.current.material as THREE.MeshStandardMaterial).needsUpdate = true;
+        }
+      } else {
+        (robotScreenRef.current.material as THREE.MeshStandardMaterial).map = null;
+        (robotScreenRef.current.material as THREE.MeshStandardMaterial).needsUpdate = true;
+      }
+    }
+  }, [showRobotScreen]);
+
   return (
     <div style={{ position: 'relative', width: '100%', height: '100vh' }}>
       <div ref={mountRef} style={{ width: '100%', height: '100%' }} />
+      {isInInnerBox && (
+        <div style={{
+          position: 'absolute',
+          bottom: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          gap: '20px',
+          zIndex: 1000
+        }}>
+          <button
+            onClick={() => {
+              if (characterRef.current.object && cameraRef.current && controlsRef.current) {
+                // Move character outside the house
+                const targetPosition = new THREE.Vector3(60, 28, 150);
+                characterRef.current.object.position.copy(targetPosition);
+                setIsInInnerBox(false);
+
+                // Animate camera to follow character
+                const cameraOffset = new THREE.Vector3(0, 35, 65);
+                const targetCameraPos = targetPosition.clone().add(cameraOffset);
+                const startPos = cameraRef.current.position.clone();
+                const startRot = cameraRef.current.rotation.clone();
+
+                // Set up lookAt rotation
+                cameraRef.current.position.copy(targetCameraPos);
+                cameraRef.current.lookAt(targetPosition);
+                const endRot = cameraRef.current.rotation.clone();
+                cameraRef.current.position.copy(startPos);
+                cameraRef.current.rotation.copy(startRot);
+
+                // Animate camera movement
+                const duration = 1000;
+                const startTime = Date.now();
+                const animateCamera = () => {
+                  const now = Date.now();
+                  const elapsed = now - startTime;
+                  const progress = Math.min(elapsed / duration, 1);
+                  const ease = (t: number) => t * t * (3 - 2 * t);
+                  const t = ease(progress);
+                  cameraRef.current?.position.lerpVectors(startPos, targetCameraPos, t);
+                  if (cameraRef.current) {
+                    cameraRef.current.rotation.x = startRot.x + (endRot.x - startRot.x) * t;
+                    cameraRef.current.rotation.y = startRot.y + (endRot.y - startRot.y) * t;
+                    cameraRef.current.rotation.z = startRot.z + (endRot.z - startRot.z) * t;
+                  }
+                  if (progress < 1) {
+                    requestAnimationFrame(animateCamera);
+                  }
+                };
+                animateCamera();
+
+                // Update controls to target the character
+                controlsRef.current.target.copy(targetPosition);
+                controlsRef.current.minDistance = 0;
+                controlsRef.current.maxDistance = Infinity;
+                controlsRef.current.update();
+              }
+            }}
+            style={{
+              padding: '10px 20px',
+              backgroundImage: 'url(/frame/button_frame.png)',
+              backgroundSize: '100% 100%',
+              backgroundRepeat: 'no-repeat',
+              color: '#d75bbb',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              width: '150px',
+              height: '50px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textShadow: '2px 2px 4px rgba(0, 0, 0, 0.5)'
+            }}
+          >
+            Exit House
+          </button>
+          <button
+            onClick={() => {
+              setShowRobotScreen(prev => {
+                const newShowRobotScreen = !prev;
+                setIsCameraLockedToChat(newShowRobotScreen);
+
+                if (robotScreenRef.current && cameraRef.current && controlsRef.current) {
+                  if (newShowRobotScreen) {
+                    // Opening: move camera to view screen
+                    const screenPosition = robotScreenRef.current.position.clone();
+                    const cameraOffset = new THREE.Vector3(-20, 5, 20);
+                    const targetCameraPos = screenPosition.clone().add(cameraOffset);
+                    const startPos = cameraRef.current.position.clone();
+                    const startRot = cameraRef.current.rotation.clone();
+                    const endRot = new THREE.Euler();
+                    cameraRef.current.position.copy(targetCameraPos);
+                    cameraRef.current.lookAt(screenPosition);
+                    endRot.copy(cameraRef.current.rotation);
+                    cameraRef.current.position.copy(startPos);
+                    cameraRef.current.rotation.copy(startRot);
+
+                    // Animate camera movement
+                    const duration = 1000;
+                    const startTime = Date.now();
+                    const animateCamera = () => {
+                      const now = Date.now();
+                      const elapsed = now - startTime;
+                      const progress = Math.min(elapsed / duration, 1);
+                      const ease = (t: number) => t * t * (3 - 2 * t);
+                      const t = ease(progress);
+                      cameraRef.current?.position.lerpVectors(startPos, targetCameraPos, t);
+                      if (cameraRef.current) {
+                        cameraRef.current.rotation.x = startRot.x + (endRot.x - startRot.x) * t;
+                        cameraRef.current.rotation.y = startRot.y + (endRot.y - startRot.y) * t;
+                        cameraRef.current.rotation.z = startRot.z + (endRot.z - startRot.z) * t;
+                      }
+                      if (progress < 1) {
+                        requestAnimationFrame(animateCamera);
+                      }
+                    };
+                    animateCamera();
+                    controlsRef.current.target.copy(screenPosition);
+                    controlsRef.current.minDistance = 30;
+                    controlsRef.current.maxDistance = 50;
+                    controlsRef.current.update();
+                  } else {
+                    // Closing: move camera back to character position
+                    if (characterRef.current.object) {
+                      const charPos = characterRef.current.object.position.clone();
+                      const cameraOffset = new THREE.Vector3(0, 35, 65);
+                      const targetCameraPos = charPos.clone().add(cameraOffset);
+                      const startPos = cameraRef.current.position.clone();
+                      const startRot = cameraRef.current.rotation.clone();
+
+                      // Set up lookAt rotation
+                      cameraRef.current.position.copy(targetCameraPos);
+                      cameraRef.current.lookAt(charPos);
+                      const endRot = cameraRef.current.rotation.clone();
+                      cameraRef.current.position.copy(startPos);
+                      cameraRef.current.rotation.copy(startRot);
+
+                      // Animate camera movement
+                      const duration = 1000;
+                      const startTime = Date.now();
+                      const animateCamera = () => {
+                        const now = Date.now();
+                        const elapsed = now - startTime;
+                        const progress = Math.min(elapsed / duration, 1);
+                        const ease = (t: number) => t * t * (3 - 2 * t);
+                        const t = ease(progress);
+                        cameraRef.current?.position.lerpVectors(startPos, targetCameraPos, t);
+                        if (cameraRef.current) {
+                          cameraRef.current.rotation.x = startRot.x + (endRot.x - startRot.x) * t;
+                          cameraRef.current.rotation.y = startRot.y + (endRot.y - startRot.y) * t;
+                          cameraRef.current.rotation.z = startRot.z + (endRot.z - startRot.z) * t;
+                        }
+                        if (progress < 1) {
+                          requestAnimationFrame(animateCamera);
+                        }
+                      };
+                      animateCamera();
+
+                      // Update controls to target the character
+                      controlsRef.current.target.copy(charPos);
+                      controlsRef.current.minDistance = 0;
+                      controlsRef.current.maxDistance = Infinity;
+                      controlsRef.current.update();
+                    }
+                  }
+                }
+                return newShowRobotScreen;
+              });
+            }}
+            style={{
+              padding: '10px 20px',
+              backgroundImage: 'url(/frame/button_frame.png)',
+              backgroundSize: '100% 100%',
+              backgroundRepeat: 'no-repeat',
+              color: '#d75bbb',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              width: '150px',
+              height: '50px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textShadow: '2px 2px 4px rgba(0, 0, 0, 0.5)'
+            }}
+          >
+            About Me
+          </button>
+          <button
+            onClick={() => {
+              setShowStart(prev => {
+                const newShowStart = !prev;
+                setShowPause(!newShowStart);
+
+                // Find the projector screen mesh in the scene
+                const projectorScreen = sceneRef.current?.getObjectByName('projectorScreen') as THREE.Mesh;
+                if (projectorScreen && cameraRef.current && controlsRef.current) {
+                  if (!newShowStart) {
+                    // Opening: move camera to view screen
+                    const screenPos = projectorScreen.position.clone();
+                    const cameraOffset = new THREE.Vector3(0, 0, 45);
+                    cameraOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), projectorScreen.rotation.y);
+                    const targetCameraPos = screenPos.clone().add(cameraOffset);
+                    const startPos = cameraRef.current.position.clone();
+                    const startRot = cameraRef.current.rotation.clone();
+
+                    // Set up lookAt rotation
+                    cameraRef.current.position.copy(targetCameraPos);
+                    cameraRef.current.lookAt(screenPos);
+                    const endRot = cameraRef.current.rotation.clone();
+                    cameraRef.current.position.copy(startPos);
+                    cameraRef.current.rotation.copy(startRot);
+
+                    // Animate camera movement
+                    const duration = 1000;
+                    const startTime = Date.now();
+                    const animateCamera = () => {
+                      const now = Date.now();
+                      const elapsed = now - startTime;
+                      const progress = Math.min(elapsed / duration, 1);
+                      const ease = (t: number) => t * t * (3 - 2 * t);
+                      const t = ease(progress);
+                      cameraRef.current?.position.lerpVectors(startPos, targetCameraPos, t);
+                      if (cameraRef.current) {
+                        cameraRef.current.rotation.x = startRot.x + (endRot.x - startRot.x) * t;
+                        cameraRef.current.rotation.y = startRot.y + (endRot.y - startRot.y) * t;
+                        cameraRef.current.rotation.z = startRot.z + (endRot.z - startRot.z) * t;
+                      }
+                      if (progress < 1) {
+                        requestAnimationFrame(animateCamera);
+                      }
+                    };
+                    animateCamera();
+
+                    // Update controls to target the screen
+                    controlsRef.current.target.copy(screenPos);
+                    controlsRef.current.minDistance = 30;
+                    controlsRef.current.maxDistance = 80;
+                    controlsRef.current.update();
+                  } else {
+                    // Closing: move camera back to character position
+                    if (characterRef.current.object) {
+                      const charPos = characterRef.current.object.position.clone();
+                      const cameraOffset = new THREE.Vector3(0, 35, 65);
+                      const targetCameraPos = charPos.clone().add(cameraOffset);
+                      const startPos = cameraRef.current.position.clone();
+                      const startRot = cameraRef.current.rotation.clone();
+
+                      // Set up lookAt rotation
+                      cameraRef.current.position.copy(targetCameraPos);
+                      cameraRef.current.lookAt(charPos);
+                      const endRot = cameraRef.current.rotation.clone();
+                      cameraRef.current.position.copy(startPos);
+                      cameraRef.current.rotation.copy(startRot);
+
+                      // Animate camera movement
+                      const duration = 1000;
+                      const startTime = Date.now();
+                      const animateCamera = () => {
+                        const now = Date.now();
+                        const elapsed = now - startTime;
+                        const progress = Math.min(elapsed / duration, 1);
+                        const ease = (t: number) => t * t * (3 - 2 * t);
+                        const t = ease(progress);
+                        cameraRef.current?.position.lerpVectors(startPos, targetCameraPos, t);
+                        if (cameraRef.current) {
+                          cameraRef.current.rotation.x = startRot.x + (endRot.x - startRot.x) * t;
+                          cameraRef.current.rotation.y = startRot.y + (endRot.y - startRot.y) * t;
+                          cameraRef.current.rotation.z = startRot.z + (endRot.z - startRot.z) * t;
+                        }
+                        if (progress < 1) {
+                          requestAnimationFrame(animateCamera);
+                        }
+                      };
+                      animateCamera();
+
+                      // Update controls to target the character
+                      controlsRef.current.target.copy(charPos);
+                      controlsRef.current.minDistance = 0;
+                      controlsRef.current.maxDistance = Infinity;
+                      controlsRef.current.update();
+                    }
+                  }
+                }
+                return newShowStart;
+              });
+            }}
+            style={{
+              padding: '10px 20px',
+              backgroundImage: 'url(/frame/button_frame.png)',
+              backgroundSize: '100% 100%',
+              backgroundRepeat: 'no-repeat',
+              color: '#d75bbb',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              width: '150px',
+              height: '50px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textShadow: '2px 2px 4px rgba(0, 0, 0, 0.5)'
+            }}
+          >
+            My Projects
+          </button>
+        </div>
+      )}
     </div>
   );
 };
