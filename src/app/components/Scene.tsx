@@ -104,7 +104,7 @@ const Scene = () => {
         const url = projectImageClicked.object.userData.url;
         if (url) {
           window.open(url, '_blank');
-          return; // Prevent further handling (e.g., robot toggle)
+          return;
         }
       }
 
@@ -119,97 +119,8 @@ const Scene = () => {
       });
 
       if (robotWalkClicked) {
-        setShowRobotScreen(prev => {
-          const newShowRobotScreen = !prev;
-          setIsCameraLockedToChat(newShowRobotScreen);
-
-          // Camera animation logic
-          if (robotScreenRef.current && cameraRef.current && controlsRef.current) {
-            if (newShowRobotScreen) {
-              // Opening: move camera to view screen
-              const screenPosition = robotScreenRef.current.position.clone();
-              const cameraOffset = new THREE.Vector3(-20, 5, 20);
-              const targetCameraPos = screenPosition.clone().add(cameraOffset);
-              const startPos = cameraRef.current.position.clone();
-              const startRot = cameraRef.current.rotation.clone();
-              const endRot = new THREE.Euler();
-              cameraRef.current.position.copy(targetCameraPos);
-              cameraRef.current.lookAt(screenPosition);
-              endRot.copy(cameraRef.current.rotation);
-              cameraRef.current.position.copy(startPos);
-              cameraRef.current.rotation.copy(startRot);
-
-              // Animate camera movement
-              const duration = 1000;
-              const startTime = Date.now();
-              const animateCamera = () => {
-                const now = Date.now();
-                const elapsed = now - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                const ease = (t: number) => t * t * (3 - 2 * t);
-                const t = ease(progress);
-                cameraRef.current?.position.lerpVectors(startPos, targetCameraPos, t);
-                if (cameraRef.current) {
-                  cameraRef.current.rotation.x = startRot.x + (endRot.x - startRot.x) * t;
-                  cameraRef.current.rotation.y = startRot.y + (endRot.y - startRot.y) * t;
-                  cameraRef.current.rotation.z = startRot.z + (endRot.z - startRot.z) * t;
-                }
-                if (progress < 1) {
-                  requestAnimationFrame(animateCamera);
-                }
-              };
-              animateCamera();
-              controlsRef.current.target.copy(screenPosition);
-              controlsRef.current.minDistance = 30;
-              controlsRef.current.maxDistance = 50;
-              controlsRef.current.update();
-            } else {
-              // Closing: move camera back to character position
-              if (characterRef.current.object) {
-                const charPos = characterRef.current.object.position.clone();
-                const cameraOffset = new THREE.Vector3(0, 35, 65);
-                const targetCameraPos = charPos.clone().add(cameraOffset);
-                const startPos = cameraRef.current.position.clone();
-                const startRot = cameraRef.current.rotation.clone();
-
-                // Set up lookAt rotation
-                cameraRef.current.position.copy(targetCameraPos);
-                cameraRef.current.lookAt(charPos);
-                const endRot = cameraRef.current.rotation.clone();
-                cameraRef.current.position.copy(startPos);
-                cameraRef.current.rotation.copy(startRot);
-
-                // Animate camera movement
-                const duration = 1000;
-                const startTime = Date.now();
-                const animateCamera = () => {
-                  const now = Date.now();
-                  const elapsed = now - startTime;
-                  const progress = Math.min(elapsed / duration, 1);
-                  const ease = (t: number) => t * t * (3 - 2 * t);
-                  const t = ease(progress);
-                  cameraRef.current?.position.lerpVectors(startPos, targetCameraPos, t);
-                  if (cameraRef.current) {
-                    cameraRef.current.rotation.x = startRot.x + (endRot.x - startRot.x) * t;
-                    cameraRef.current.rotation.y = startRot.y + (endRot.y - startRot.y) * t;
-                    cameraRef.current.rotation.z = startRot.z + (endRot.z - startRot.z) * t;
-                  }
-                  if (progress < 1) {
-                    requestAnimationFrame(animateCamera);
-                  }
-                };
-                animateCamera();
-
-                // Update controls to target the character
-                controlsRef.current.target.copy(charPos);
-                controlsRef.current.minDistance = 0;
-                controlsRef.current.maxDistance = Infinity;
-                controlsRef.current.update();
-              }
-            }
-          }
-          return newShowRobotScreen;
-        });
+        setShowRobotScreen(prev => !prev);
+        return;
       }
 
       // Check for start.glb click
@@ -224,53 +135,6 @@ const Scene = () => {
       if (startClicked) {
         setShowStart(false);
         setShowPause(true);
-
-        // Move camera to projector screen
-        // Find the projector screen mesh in the scene
-        const projectorScreen = scene.getObjectByName('projectorScreen') as THREE.Mesh;
-        if (projectorScreen) {
-          // Target position: a bit in front of the screen, slightly above
-          const screenPos = projectorScreen.position.clone();
-          const cameraOffset = new THREE.Vector3(0, 0, 45);
-          cameraOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), projectorScreen.rotation.y);
-          const targetCameraPos = screenPos.clone().add(cameraOffset);
-          const startPos = camera.position.clone();
-          const startRot = camera.rotation.clone();
-
-          // Set up lookAt rotation
-          camera.position.copy(targetCameraPos);
-          camera.lookAt(screenPos);
-          const endRot = camera.rotation.clone();
-          camera.position.copy(startPos);
-          camera.rotation.copy(startRot);
-
-          // Animate camera movement
-          const duration = 1000;
-          const startTime = Date.now();
-          const animateCamera = () => {
-            const now = Date.now();
-            const elapsed = now - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            const ease = (t: number) => t * t * (3 - 2 * t);
-            const t = ease(progress);
-            camera.position.lerpVectors(startPos, targetCameraPos, t);
-            camera.rotation.x = startRot.x + (endRot.x - startRot.x) * t;
-            camera.rotation.y = startRot.y + (endRot.y - startRot.y) * t;
-            camera.rotation.z = startRot.z + (endRot.z - startRot.z) * t;
-            if (progress < 1) {
-              requestAnimationFrame(animateCamera);
-            }
-          };
-          animateCamera();
-
-          // Update controls to target the screen
-          if (controlsRef.current) {
-            controlsRef.current.target.copy(screenPos);
-            controlsRef.current.minDistance = 30;
-            controlsRef.current.maxDistance = 80;
-            controlsRef.current.update();
-          }
-        }
         return;
       }
 
@@ -286,94 +150,31 @@ const Scene = () => {
       if (pauseClicked) {
         setShowStart(true);
         setShowPause(false);
+        return;
+      }
 
-        // Move camera back to character position
-        if (characterRef.current.object) {
-          const charPos = characterRef.current.object.position.clone();
-          const cameraOffset = new THREE.Vector3(0, 35, 65); // Use same offset as when following character
-          const targetCameraPos = charPos.clone().add(cameraOffset);
-          const startPos = camera.position.clone();
-          const startRot = camera.rotation.clone();
-
-          // Set up lookAt rotation
-          camera.position.copy(targetCameraPos);
-          camera.lookAt(charPos);
-          const endRot = camera.rotation.clone();
-          camera.position.copy(startPos);
-          camera.rotation.copy(startRot);
-
-          // Animate camera movement
-          const duration = 1000;
-          const startTime = Date.now();
-          const animateCamera = () => {
-            const now = Date.now();
-            const elapsed = now - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            const ease = (t: number) => t * t * (3 - 2 * t);
-            const t = ease(progress);
-            camera.position.lerpVectors(startPos, targetCameraPos, t);
-            camera.rotation.x = startRot.x + (endRot.x - startRot.x) * t;
-            camera.rotation.y = startRot.y + (endRot.y - startRot.y) * t;
-            camera.rotation.z = startRot.z + (endRot.z - startRot.z) * t;
-            if (progress < 1) {
-              requestAnimationFrame(animateCamera);
-            }
-          };
-          animateCamera();
-
-          // Update controls to target the character
-          if (controlsRef.current) {
-            controlsRef.current.target.copy(charPos);
-            controlsRef.current.minDistance = 0;
-            controlsRef.current.maxDistance = Infinity;
-            controlsRef.current.update();
-          }
+      // Check for achievements start/pause buttons
+      const achievementsStartClicked = intersects.some(intersect => {
+        let obj: THREE.Object3D | null = intersect.object;
+        while (obj) {
+          if (obj.name === 'achievementsStartModel') return true;
+          obj = obj.parent;
         }
+        return false;
+      });
 
-        // Check for bed.glb click
-        console.log('bedModelRef.current:', bedModelRef.current);
-        console.log('intersects:', intersects.map(i => i.object.name));
-        const bedClicked = intersects.some(intersect => {
-          let obj: THREE.Object3D | null = intersect.object;
-          while (obj) {
-            if (obj === bedModelRef.current || obj.name === 'bed') return true;
-            obj = obj.parent;
-          }
-          return false;
-        });
-        if (bedClicked) {
-          // Move character to bed and play sitting animation
-          if (bedModelRef.current && characterRef.current.object) {
-            // Move character to bed position (adjust y as needed for correct sitting position)
-            characterRef.current.object.position.copy(bedModelRef.current.position.clone().add(new THREE.Vector3(0, 20, 0)));
-            characterRef.current.object.rotation.y = bedModelRef.current.rotation.y;
-          }
-          // Load sitting animation
-          loadModel('/model/Sitting.fbx');
-          return;
+      const achievementsPauseClicked = intersects.some(intersect => {
+        let obj: THREE.Object3D | null = intersect.object;
+        while (obj) {
+          if (obj.name === 'achievementsPauseModel') return true;
+          obj = obj.parent;
         }
+        return false;
+      });
 
-        // Check for gamingChair.glb click
-        const chairClicked = intersects.some(intersect => {
-          let obj: THREE.Object3D | null = intersect.object;
-          while (obj) {
-            if (obj === chairModelRef.current || obj.name === 'chair') return true;
-            obj = obj.parent;
-          }
-          return false;
-        });
-        if (chairClicked) {
-          // Move character to chair and play sitting animation
-          if (chairModelRef.current && characterRef.current.object) {
-            // Adjust the Y offset as needed for correct sitting position
-            characterRef.current.object.position.copy(chairModelRef.current.position.clone().add(new THREE.Vector3(0, 20, 0)));
-            characterRef.current.object.rotation.y = chairModelRef.current.rotation.y;
-          }
-          // Load sitting animation
-          loadModel('/model/Sitting.fbx');
-          return;
-        }
-
+      if (achievementsStartClicked || achievementsPauseClicked) {
+        setShowStart(prev => !prev);
+        setShowPause(prev => !prev);
         return;
       }
     };
@@ -707,6 +508,16 @@ const Scene = () => {
         // Optionally add a showcaseModelRef if needed
       });
 
+      // Add showcase for achievements screen
+      gltfLoader.load('/house/awards.glb', (gltf2) => {
+        const achievementsShowcaseModel = gltf2.scene;
+        achievementsShowcaseModel.name = 'achievementsTitle';
+        achievementsShowcaseModel.scale.set(15, 15, 15);
+        achievementsShowcaseModel.position.set(-100, 60, -20); // Position above achievements screen
+        achievementsShowcaseModel.rotateY(Math.PI / 2); // Rotate to face the screen
+        scene.add(achievementsShowcaseModel);
+      });
+
       if (showStart) {
         gltfLoader.load('/house/start.glb', (gltf2) => {
           const startModel = gltf2.scene;
@@ -892,6 +703,26 @@ const Scene = () => {
       border.position.copy(projectorScreen.position);
       border.rotation.copy(projectorScreen.rotation);
       scene.add(border);
+
+      // Add achievements projector screen
+      const achievementsScreen = new THREE.Mesh(screenGeometry, screenMaterial);
+      achievementsScreen.position.set(-100, 40, -20);
+      achievementsScreen.rotation.y = Math.PI / 2;
+      achievementsScreen.name = 'achievementsScreen';
+      scene.add(achievementsScreen);
+
+      // Add a black border plane behind the achievements screen
+      const achievementsBorderPlane = new THREE.Mesh(borderPlaneGeometry, borderPlaneMaterial);
+      achievementsBorderPlane.position.copy(achievementsScreen.position);
+      achievementsBorderPlane.rotation.copy(achievementsScreen.rotation);
+      achievementsBorderPlane.position.z -= 0.2;
+      scene.add(achievementsBorderPlane);
+
+      // Add a thin outline border for achievements screen
+      const achievementsBorder = new THREE.LineSegments(edgeGeometry, edgeMaterial);
+      achievementsBorder.position.copy(achievementsScreen.position);
+      achievementsBorder.rotation.copy(achievementsScreen.rotation);
+      scene.add(achievementsBorder);
 
       // Load and display portfolio/project1.png as a plane in the scene
       //project image (portfolio)
@@ -1774,6 +1605,123 @@ const Scene = () => {
             }}
           >
             My Projects
+          </button>
+          <button
+            onClick={() => {
+              // Find the achievements screen mesh in the scene
+              const achievementsScreen = sceneRef.current?.getObjectByName('achievementsScreen') as THREE.Mesh;
+              if (achievementsScreen && cameraRef.current && controlsRef.current) {
+                // Toggle between achievements screen and character position
+                const isViewingAchievements = cameraRef.current.position.distanceTo(achievementsScreen.position) < 100;
+                
+                if (!isViewingAchievements) {
+                  // Move camera to view achievements screen
+                  const screenPos = achievementsScreen.position.clone();
+                  const cameraOffset = new THREE.Vector3(0, 0, 45);
+                  cameraOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), achievementsScreen.rotation.y);
+                  const targetCameraPos = screenPos.clone().add(cameraOffset);
+                  const startPos = cameraRef.current.position.clone();
+                  const startRot = cameraRef.current.rotation.clone();
+
+                  // Set up lookAt rotation
+                  cameraRef.current.position.copy(targetCameraPos);
+                  cameraRef.current.lookAt(screenPos);
+                  const endRot = cameraRef.current.rotation.clone();
+                  cameraRef.current.position.copy(startPos);
+                  cameraRef.current.rotation.copy(startRot);
+
+                  // Animate camera movement
+                  const duration = 1000;
+                  const startTime = Date.now();
+                  const animateCamera = () => {
+                    const now = Date.now();
+                    const elapsed = now - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const ease = (t: number) => t * t * (3 - 2 * t);
+                    const t = ease(progress);
+                    cameraRef.current?.position.lerpVectors(startPos, targetCameraPos, t);
+                    if (cameraRef.current) {
+                      cameraRef.current.rotation.x = startRot.x + (endRot.x - startRot.x) * t;
+                      cameraRef.current.rotation.y = startRot.y + (endRot.y - startRot.y) * t;
+                      cameraRef.current.rotation.z = startRot.z + (endRot.z - startRot.z) * t;
+                    }
+                    if (progress < 1) {
+                      requestAnimationFrame(animateCamera);
+                    }
+                  };
+                  animateCamera();
+
+                  // Update controls to target the screen
+                  controlsRef.current.target.copy(screenPos);
+                  controlsRef.current.minDistance = 30;
+                  controlsRef.current.maxDistance = 80;
+                  controlsRef.current.update();
+                } else {
+                  // Return to character position
+                  if (characterRef.current.object) {
+                    const charPos = characterRef.current.object.position.clone();
+                    const cameraOffset = new THREE.Vector3(0, 35, 65);
+                    const targetCameraPos = charPos.clone().add(cameraOffset);
+                    const startPos = cameraRef.current.position.clone();
+                    const startRot = cameraRef.current.rotation.clone();
+
+                    // Set up lookAt rotation
+                    cameraRef.current.position.copy(targetCameraPos);
+                    cameraRef.current.lookAt(charPos);
+                    const endRot = cameraRef.current.rotation.clone();
+                    cameraRef.current.position.copy(startPos);
+                    cameraRef.current.rotation.copy(startRot);
+
+                    // Animate camera movement
+                    const duration = 1000;
+                    const startTime = Date.now();
+                    const animateCamera = () => {
+                      const now = Date.now();
+                      const elapsed = now - startTime;
+                      const progress = Math.min(elapsed / duration, 1);
+                      const ease = (t: number) => t * t * (3 - 2 * t);
+                      const t = ease(progress);
+                      cameraRef.current?.position.lerpVectors(startPos, targetCameraPos, t);
+                      if (cameraRef.current) {
+                        cameraRef.current.rotation.x = startRot.x + (endRot.x - startRot.x) * t;
+                        cameraRef.current.rotation.y = startRot.y + (endRot.y - startRot.y) * t;
+                        cameraRef.current.rotation.z = startRot.z + (endRot.z - startRot.z) * t;
+                      }
+                      if (progress < 1) {
+                        requestAnimationFrame(animateCamera);
+                      }
+                    };
+                    animateCamera();
+
+                    // Update controls to target the character
+                    controlsRef.current.target.copy(charPos);
+                    controlsRef.current.minDistance = 0;
+                    controlsRef.current.maxDistance = Infinity;
+                    controlsRef.current.update();
+                  }
+                }
+              }
+            }}
+            style={{
+              padding: '10px 20px',
+              backgroundImage: 'url(/frame/button_frame.png)',
+              backgroundSize: '100% 100%',
+              backgroundRepeat: 'no-repeat',
+              color: '#d75bbb',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              width: '150px',
+              height: '50px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textShadow: '2px 2px 4px rgba(0, 0, 0, 0.5)'
+            }}
+          >
+            Awards
           </button>
         </div>
       )}
