@@ -724,10 +724,41 @@ const Scene = () => {
       achievementsBorder.rotation.copy(achievementsScreen.rotation);
       scene.add(achievementsBorder);
 
-      // Load and display portfolio/project1.png as a plane in the scene
-      //project image (portfolio)
+      // Create texture loader
       const loader = new THREE.TextureLoader();
-      loader.load('/portfolio/project1.png', (texture) => {
+
+      // Define award images array
+      const awardImages: ProjectImage[] = [
+        { file: '/portfolio/project1.png', pos: [-99, 50, -20], rotY: Math.PI / 2, name: 'Dean\'s List', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [-99, 40, -20], rotY: Math.PI / 2, name: 'Best Project', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [-99, 30, -20], rotY: Math.PI / 2, name: 'Hackathon Winner', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [-99, 50, -36], rotY: Math.PI / 2, name: 'Research Grant', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [-99, 40, -36], rotY: Math.PI / 2, name: 'Research Grant', url: 'https://eemunportfolio.vercel.app/' },
+
+        { file: '/portfolio/project1.png', pos: [-99, 30, -36], rotY: Math.PI / 2, name: 'Innovation Award', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [-99, 50, -4], rotY: Math.PI / 2, name: 'Academic Excellence', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [-99, 40, -4], rotY: Math.PI / 2, name: 'Leadership Award', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [-99, 30, -4], rotY: Math.PI / 2, name: 'Community Service', url: 'https://eemunportfolio.vercel.app/' },
+      ];
+
+      // Load and display award images
+      awardImages.forEach(({ file, pos, rotY, name, url }) => {
+        loader.load(file, (texture: THREE.Texture) => {
+          const imgWidth = 15;
+          const imgHeight = 8;
+          const geometry = new THREE.PlaneGeometry(imgWidth, imgHeight);
+          const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
+          const imagePlane = new THREE.Mesh(geometry, material);
+          imagePlane.position.set(...pos);
+          imagePlane.rotation.y = rotY;
+          imagePlane.name = name;
+          imagePlane.userData.url = url;
+          scene.add(imagePlane);
+        });
+      });
+
+      // Load and display portfolio/project1.png as a plane in the scene
+      loader.load('/portfolio/project1.png', (texture: THREE.Texture) => {
         const imgWidth = 15;  // Adjust as needed 
         const imgHeight = 8; // Adjust as needed
         const geometry = new THREE.PlaneGeometry(imgWidth, imgHeight);
@@ -749,10 +780,11 @@ const Scene = () => {
         { file: '/portfolio/project1.png', pos: [60, 40, -36], rotY: -Math.PI / 4, name: 'Recycle_Reward_System', url: 'https://eemunportfolio.vercel.app/' },
         { file: '/portfolio/project1.png', pos: [60, 30, -36], rotY: -Math.PI / 4, name: 'CureMeBaby', url: 'https://eemunportfolio.vercel.app/' },
       ];
+
       // Only add project images if showProjects is true
       if (showProjects) {
         projectImages.forEach(({ file, pos, rotY, name, url }) => {
-          loader.load(file, (texture) => {
+          loader.load(file, (texture: THREE.Texture) => {
             const imgWidth = 15;
             const imgHeight = 8;
             const geometry = new THREE.PlaneGeometry(imgWidth, imgHeight);
