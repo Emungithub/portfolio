@@ -58,9 +58,26 @@ const Scene = () => {
   });
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
+  const [windowSize, setWindowSize] = useState({
+    width: typeof window !== 'undefined' ? window.innerWidth : 0,
+    height: typeof window !== 'undefined' ? window.innerHeight : 0
+  });
 
   useEffect(() => {
     setIsMounted(true);
+  }, []);
+
+  // Add window resize handler
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
@@ -75,14 +92,52 @@ const Scene = () => {
     const scene = new THREE.Scene();
     sceneRef.current = scene;
     scene.background = new THREE.Color(0x1a1a1a);
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    
+    // Responsive camera setup
+    const camera = new THREE.PerspectiveCamera(
+      60,
+      windowSize.width / windowSize.height,
+      0.1,
+      1000
+    );
     cameraRef.current = camera;
+    
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     rendererRef.current = renderer;
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setSize(windowSize.width, windowSize.height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit pixel ratio for performance
     renderer.shadowMap.enabled = true;
     renderer.setClearColor(0x1a1a1a, 1);
     mountRef.current.appendChild(renderer.domElement);
+
+    // Controls with responsive settings
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controlsRef.current = controls;
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.screenSpacePanning = true;
+    controls.enabled = true;
+    controls.enablePan = false;
+
+    // Set initial camera limits
+    controls.minDistance = 30;  // Minimum zoom distance
+    controls.maxDistance = 150; // Maximum zoom distance
+    controls.minPolarAngle = 0; // Minimum vertical angle (looking up)
+    controls.maxPolarAngle = Math.PI / 2; // Maximum vertical angle (looking down)
+    controls.minAzimuthAngle = -Math.PI / 2; // Minimum horizontal angle
+    controls.maxAzimuthAngle = Math.PI / 2; // Maximum horizontal angle
+    controls.update();
+
+    // Adjust controls based on screen size
+    if (windowSize.width < 768) {
+      controls.minDistance = 30;
+      controls.maxDistance = 100;
+      controls.maxPolarAngle = Math.PI / 2;
+    } else {
+      controls.minDistance = 30;
+      controls.maxDistance = 150;
+      controls.maxPolarAngle = Math.PI / 2;
+    }
 
     // Raycaster for click detection
     const raycaster = new THREE.Raycaster();
@@ -367,15 +422,6 @@ const Scene = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
-
-    // Controls
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controlsRef.current = controls;
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.screenSpacePanning = true;
-    controls.enabled = true; // Enable mouse controls
-    controls.enablePan = false; // Disable panning with keyboard
 
     // Add lights
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
@@ -734,7 +780,6 @@ const Scene = () => {
         { file: '/portfolio/project1.png', pos: [-99, 30, -20], rotY: Math.PI / 2, name: 'Hackathon Winner', url: 'https://eemunportfolio.vercel.app/' },
         { file: '/portfolio/project1.png', pos: [-99, 50, -36], rotY: Math.PI / 2, name: 'Research Grant', url: 'https://eemunportfolio.vercel.app/' },
         { file: '/portfolio/project1.png', pos: [-99, 40, -36], rotY: Math.PI / 2, name: 'Research Grant', url: 'https://eemunportfolio.vercel.app/' },
-
         { file: '/portfolio/project1.png', pos: [-99, 30, -36], rotY: Math.PI / 2, name: 'Innovation Award', url: 'https://eemunportfolio.vercel.app/' },
         { file: '/portfolio/project1.png', pos: [-99, 50, -4], rotY: Math.PI / 2, name: 'Academic Excellence', url: 'https://eemunportfolio.vercel.app/' },
         { file: '/portfolio/project1.png', pos: [-99, 40, -4], rotY: Math.PI / 2, name: 'Leadership Award', url: 'https://eemunportfolio.vercel.app/' },
@@ -818,52 +863,7 @@ const Scene = () => {
         // Optionally add a ref if you want to manipulate it later
       });
 
-      // Load and display road stones
-      const fbxLoader = new FBXLoader();
-      fbxLoader.load('/tile/Road_stone_1.fbx', (stone1) => {
-        stone1.name = 'roadStone1';
-        stone1.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
-        stone1.position.set(100, 0, 200); // Adjust position as needed
-        scene.add(stone1);
-      });
-      
-      fbxLoader.load('/tile/Road_wood_1.fbx', (stone1) => {
-        stone1.name = 'roadStone1';
-        stone1.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
-        stone1.position.set(-100, 0, 200); // Adjust position as needed
-        scene.add(stone1);
-      });
-
-      fbxLoader.load('/tile/Road_breek_1.fbx', (stone1) => {
-        stone1.name = 'roadStone1';
-        stone1.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
-        stone1.position.set(0, 0, 200); // Adjust position as needed
-        stone1.rotation.y = Math.PI / 2; // Rotate 90 degrees around Y axis
-        scene.add(stone1);
-      });
-
-      fbxLoader.load('/tile/Fense_1.fbx', (stone1) => {
-        stone1.name = 'roadStone1';
-        stone1.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
-        stone1.position.set(0, 0, 200); // Adjust position as needed
-        stone1.rotation.y = Math.PI / 2; // Rotate 90 degrees around Y axis
-        scene.add(stone1);
-      });
-      fbxLoader.load('/tile/bench.fbx', (stone1) => {
-        stone1.name = 'roadStone1';
-        stone1.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
-        stone1.position.set(0, 0, 200); // Adjust position as needed
-        stone1.rotation.y = Math.PI / 2; // Rotate 90 degrees around Y axis
-        scene.add(stone1);
-      });
-      fbxLoader.load('/tile/Lamp_1.fbx', (stone1) => {
-        stone1.name = 'roadStone1';
-        stone1.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
-        stone1.position.set(0, 0, 200); // Adjust position as needed
-        stone1.rotation.y = Math.PI / 2; // Rotate 90 degrees around Y axis
-        scene.add(stone1);
-      });
-     
+   
     });
 
     // Camera position
@@ -938,12 +938,15 @@ const Scene = () => {
             controlsRef.current.target.copy(characterRef.current.object.position);
             controlsRef.current.minDistance = 30;
             controlsRef.current.maxDistance = 80;
+            controlsRef.current.minPolarAngle = 0;
+            controlsRef.current.maxPolarAngle = Math.PI / 2;
+            controlsRef.current.minAzimuthAngle = -Math.PI / 2;
+            controlsRef.current.maxAzimuthAngle = Math.PI / 2;
             controlsRef.current.update();
           }
         } else if (!isInHouse) {
           // Normal movement outside house
           characterRef.current.object.position.copy(nextPosition);
-          
           // Update camera position to follow character from behind
           if (characterRef.current.direction.z > 0) { // Moving down (character facing camera)
             const cameraOffset = new THREE.Vector3(0, 35, -65);
@@ -979,13 +982,15 @@ const Scene = () => {
               characterRef.current.object.rotation.y = Math.PI;
             }
           }
-          
-          // Reset camera zoom limits when outside
+          // Reset camera zoom and angle limits when outside
           if (controlsRef.current) {
-            controlsRef.current.minDistance = 0;
-            controlsRef.current.maxDistance = Infinity;
-            controlsRef.current.maxPolarAngle = Math.PI;
+            controlsRef.current.minDistance = 30;
+            controlsRef.current.maxDistance = 150;
             controlsRef.current.minPolarAngle = 0;
+            controlsRef.current.maxPolarAngle = Math.PI / 2;
+            controlsRef.current.minAzimuthAngle = -Math.PI / 2;
+            controlsRef.current.maxAzimuthAngle = Math.PI / 2;
+            controlsRef.current.update(); // Added update here
           }
         }
 
@@ -1107,14 +1112,19 @@ const Scene = () => {
           controlsRef.current.maxDistance = 50;
           controlsRef.current.minPolarAngle = Math.PI / 4;
           controlsRef.current.maxPolarAngle = Math.PI / 2;
+          // Update will be handled by the final controls.update() or if specific immediate effect needed
         }
       } else {
         // Normal camera controls when not chatting
         if (controlsRef.current) {
-          controlsRef.current.minDistance = 0;
-          controlsRef.current.maxDistance = Infinity;
+          // These limits should be consistent with the "outside house" general limits
+          controlsRef.current.minDistance = 30; 
+          controlsRef.current.maxDistance = 150;
           controlsRef.current.minPolarAngle = 0;
-          controlsRef.current.maxPolarAngle = Math.PI;
+          controlsRef.current.maxPolarAngle = Math.PI / 2; 
+          controlsRef.current.minAzimuthAngle = -Math.PI / 2; // Ensure these are also set if they can vary
+          controlsRef.current.maxAzimuthAngle = Math.PI / 2;   // Ensure these are also set
+          controlsRef.current.update(); // Added update here
         }
       }
 
@@ -1126,12 +1136,30 @@ const Scene = () => {
 
     animate();
 
-    // Handle window resize
+    // Update handleResize function
     const handleResize = () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+
+      // Update camera
+      camera.aspect = width / height;
       camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setPixelRatio(window.devicePixelRatio);
+
+      // Update renderer
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+      // Update controls
+      if (width < 768) {
+        controls.minDistance = 30;
+        controls.maxDistance = 100;
+        controls.maxPolarAngle = Math.PI / 2;
+      } else {
+        controls.minDistance = 30;
+        controls.maxDistance = 150;
+        controls.maxPolarAngle = Math.PI / 2;
+      }
+      controls.update();
     };
 
     window.addEventListener('resize', handleResize);
@@ -1188,7 +1216,7 @@ const Scene = () => {
         }
       }
     };
-  }, [isMounted]);
+  }, [isMounted, windowSize]); // Add windowSize to dependencies
 
   // Update screen visibility when state changes
   useEffect(() => {
@@ -1327,12 +1355,15 @@ const Scene = () => {
       {isInInnerBox && (
         <div style={{
           position: 'absolute',
-          bottom: '20px',
-          left: '50%',
-          transform: 'translateX(-50%)',
+          bottom: windowSize.width < 768 ? '10px' : '20px',
+          right: windowSize.width < 768 ? '10px' : '20px',
+          transform: 'none',
           display: 'flex',
-          gap: '20px',
-          zIndex: 1000
+          flexDirection: windowSize.width < 768 ? 'column' : 'column',
+          gap: windowSize.width < 768 ? '10px' : '20px',
+          zIndex: 1000,
+          padding: windowSize.width < 768 ? '10px' : '0',
+          alignItems: 'flex-end'
         }}>
           <button
             onClick={() => {
@@ -1378,13 +1409,14 @@ const Scene = () => {
 
                 // Update controls to target the character
                 controlsRef.current.target.copy(targetPosition);
-                controlsRef.current.minDistance = 0;
-                controlsRef.current.maxDistance = Infinity;
+                controlsRef.current.minDistance = 30;
+                controlsRef.current.maxDistance = 150;
+                controlsRef.current.maxPolarAngle = Math.PI / 2;
                 controlsRef.current.update();
               }
             }}
             style={{
-              padding: '10px 20px',
+              padding: windowSize.width < 768 ? '8px 16px' : '10px 20px',
               backgroundImage: 'url(/frame/button_frame.png)',
               backgroundSize: '100% 100%',
               backgroundRepeat: 'no-repeat',
@@ -1392,10 +1424,10 @@ const Scene = () => {
               border: 'none',
               borderRadius: '5px',
               cursor: 'pointer',
-              fontSize: '16px',
+              fontSize: windowSize.width < 768 ? '14px' : '16px',
               fontWeight: 'bold',
-              width: '150px',
-              height: '50px',
+              width: windowSize.width < 768 ? '120px' : '150px',
+              height: windowSize.width < 768 ? '40px' : '50px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -1488,8 +1520,9 @@ const Scene = () => {
 
                       // Update controls to target the character
                       controlsRef.current.target.copy(charPos);
-                      controlsRef.current.minDistance = 0;
-                      controlsRef.current.maxDistance = Infinity;
+                      controlsRef.current.minDistance = 30;
+                      controlsRef.current.maxDistance = 150;
+                      controlsRef.current.maxPolarAngle = Math.PI / 2;
                       controlsRef.current.update();
                     }
                   }
@@ -1498,7 +1531,7 @@ const Scene = () => {
               });
             }}
             style={{
-              padding: '10px 20px',
+              padding: windowSize.width < 768 ? '8px 16px' : '10px 20px',
               backgroundImage: 'url(/frame/button_frame.png)',
               backgroundSize: '100% 100%',
               backgroundRepeat: 'no-repeat',
@@ -1506,10 +1539,10 @@ const Scene = () => {
               border: 'none',
               borderRadius: '5px',
               cursor: 'pointer',
-              fontSize: '16px',
+              fontSize: windowSize.width < 768 ? '14px' : '16px',
               fontWeight: 'bold',
-              width: '150px',
-              height: '50px',
+              width: windowSize.width < 768 ? '120px' : '150px',
+              height: windowSize.width < 768 ? '40px' : '50px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -1608,8 +1641,9 @@ const Scene = () => {
 
                       // Update controls to target the character
                       controlsRef.current.target.copy(charPos);
-                      controlsRef.current.minDistance = 0;
-                      controlsRef.current.maxDistance = Infinity;
+                      controlsRef.current.minDistance = 30;
+                      controlsRef.current.maxDistance = 150;
+                      controlsRef.current.maxPolarAngle = Math.PI / 2;
                       controlsRef.current.update();
                     }
                   }
@@ -1618,7 +1652,7 @@ const Scene = () => {
               });
             }}
             style={{
-              padding: '10px 20px',
+              padding: windowSize.width < 768 ? '8px 16px' : '10px 20px',
               backgroundImage: 'url(/frame/button_frame.png)',
               backgroundSize: '100% 100%',
               backgroundRepeat: 'no-repeat',
@@ -1626,10 +1660,10 @@ const Scene = () => {
               border: 'none',
               borderRadius: '5px',
               cursor: 'pointer',
-              fontSize: '16px',
+              fontSize: windowSize.width < 768 ? '14px' : '16px',
               fontWeight: 'bold',
-              width: '150px',
-              height: '50px',
+              width: windowSize.width < 768 ? '120px' : '150px',
+              height: windowSize.width < 768 ? '40px' : '50px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -1727,15 +1761,16 @@ const Scene = () => {
 
                     // Update controls to target the character
                     controlsRef.current.target.copy(charPos);
-                    controlsRef.current.minDistance = 0;
-                    controlsRef.current.maxDistance = Infinity;
+                    controlsRef.current.minDistance = 30;
+                    controlsRef.current.maxDistance = 150;
+                    controlsRef.current.maxPolarAngle = Math.PI / 2;
                     controlsRef.current.update();
                   }
                 }
               }
             }}
             style={{
-              padding: '10px 20px',
+              padding: windowSize.width < 768 ? '8px 16px' : '10px 20px',
               backgroundImage: 'url(/frame/button_frame.png)',
               backgroundSize: '100% 100%',
               backgroundRepeat: 'no-repeat',
@@ -1743,10 +1778,10 @@ const Scene = () => {
               border: 'none',
               borderRadius: '5px',
               cursor: 'pointer',
-              fontSize: '16px',
+              fontSize: windowSize.width < 768 ? '14px' : '16px',
               fontWeight: 'bold',
-              width: '150px',
-              height: '50px',
+              width: windowSize.width < 768 ? '120px' : '150px',
+              height: windowSize.width < 768 ? '40px' : '50px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -1755,6 +1790,162 @@ const Scene = () => {
           >
             Awards
           </button>
+
+          {/* Directional Controls */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '5px',
+            marginTop: '20px'
+          }}>
+            {/* Up Button */}
+            <button
+              onMouseDown={() => {
+                if (!characterRef.current.isWalking) {
+                  characterRef.current.isWalking = true;
+                  characterRef.current.direction.z = -1;
+                  if (characterRef.current.object) characterRef.current.object.rotation.y = Math.PI;
+                }
+              }}
+              onMouseUp={() => {
+                characterRef.current.direction.z = 0;
+                if (characterRef.current.direction.x === 0 && characterRef.current.direction.z === 0) {
+                  characterRef.current.isWalking = false;
+                }
+              }}
+              style={{
+                padding: '10px',
+                backgroundImage: 'url(/frame/button_frame.png)',
+                backgroundSize: '100% 100%',
+                backgroundRepeat: 'no-repeat',
+                color: '#d75bbb',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                width: '50px',
+                height: '50px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '20px',
+                fontWeight: 'bold'
+              }}
+            >
+              ↑
+            </button>
+            
+            {/* Middle Row */}
+            <div style={{ display: 'flex', gap: '5px' }}>
+              {/* Left Button */}
+              <button
+                onMouseDown={() => {
+                  if (!characterRef.current.isWalking) {
+                    characterRef.current.isWalking = true;
+                    characterRef.current.direction.x = -1;
+                    if (characterRef.current.object) characterRef.current.object.rotation.y = -Math.PI / 2;
+                  }
+                }}
+                onMouseUp={() => {
+                  characterRef.current.direction.x = 0;
+                  if (characterRef.current.direction.x === 0 && characterRef.current.direction.z === 0) {
+                    characterRef.current.isWalking = false;
+                  }
+                }}
+                style={{
+                  padding: '10px',
+                  backgroundImage: 'url(/frame/button_frame.png)',
+                  backgroundSize: '100% 100%',
+                  backgroundRepeat: 'no-repeat',
+                  color: '#d75bbb',
+                  border: 'none',
+                  borderRadius: '5px',
+                  cursor: 'pointer',
+                  width: '50px',
+                  height: '50px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '20px',
+                  fontWeight: 'bold'
+                }}
+              >
+                ←
+              </button>
+
+              {/* Down Button */}
+              <button
+                onMouseDown={() => {
+                  if (!characterRef.current.isWalking) {
+                    characterRef.current.isWalking = true;
+                    characterRef.current.direction.z = 1;
+                    if (characterRef.current.object) characterRef.current.object.rotation.y = 0;
+                  }
+                }}
+                onMouseUp={() => {
+                  characterRef.current.direction.z = 0;
+                  if (characterRef.current.direction.x === 0 && characterRef.current.direction.z === 0) {
+                    characterRef.current.isWalking = false;
+                  }
+                }}
+                style={{
+                  padding: '10px',
+                  backgroundImage: 'url(/frame/button_frame.png)',
+                  backgroundSize: '100% 100%',
+                  backgroundRepeat: 'no-repeat',
+                  color: '#d75bbb',
+                  border: 'none',
+                  borderRadius: '5px',
+                  cursor: 'pointer',
+                  width: '50px',
+                  height: '50px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '20px',
+                  fontWeight: 'bold'
+                }}
+              >
+                ↓
+              </button>
+
+              {/* Right Button */}
+              <button
+                onMouseDown={() => {
+                  if (!characterRef.current.isWalking) {
+                    characterRef.current.isWalking = true;
+                    characterRef.current.direction.x = 1;
+                    if (characterRef.current.object) characterRef.current.object.rotation.y = Math.PI / 2;
+                  }
+                }}
+                onMouseUp={() => {
+                  characterRef.current.direction.x = 0;
+                  if (characterRef.current.direction.x === 0 && characterRef.current.direction.z === 0) {
+                    characterRef.current.isWalking = false;
+                  }
+                }}
+                style={{
+                  padding: '10px',
+                  backgroundImage: 'url(/frame/button_frame.png)',
+                  backgroundSize: '100% 100%',
+                  backgroundRepeat: 'no-repeat',
+                  color: '#d75bbb',
+                  border: 'none',
+                  borderRadius: '5px',
+                  cursor: 'pointer',
+                  width: '50px',
+                  height: '50px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '20px',
+                  fontWeight: 'bold'
+                }}
+              >
+                →
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
