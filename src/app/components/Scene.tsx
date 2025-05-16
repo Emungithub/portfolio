@@ -58,30 +58,17 @@ const Scene = () => {
   });
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
-  const [windowSize, setWindowSize] = useState({
-    width: typeof window !== 'undefined' ? window.innerWidth : 0,
-    height: typeof window !== 'undefined' ? window.innerHeight : 0
-  });
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // Add window resize handler
-  useEffect(() => {
-    const handleResize = () => {
-      setWindowSize({
-        width: window.innerWidth,
-        height: window.innerHeight
-      });
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
   useEffect(() => {
     if (!mountRef.current || !isMounted) return;
+
+    // State to track if character is in house
+    let isInHouse = true;
+    let hasTeleportedToCenter = true;
 
     // Clear any existing content
     while (mountRef.current.firstChild) {
@@ -92,52 +79,14 @@ const Scene = () => {
     const scene = new THREE.Scene();
     sceneRef.current = scene;
     scene.background = new THREE.Color(0x1a1a1a);
-    
-    // Responsive camera setup
-    const camera = new THREE.PerspectiveCamera(
-      60,
-      windowSize.width / windowSize.height,
-      0.1,
-      1000
-    );
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
     cameraRef.current = camera;
-    
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     rendererRef.current = renderer;
-    renderer.setSize(windowSize.width, windowSize.height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit pixel ratio for performance
+    renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
     renderer.setClearColor(0x1a1a1a, 1);
     mountRef.current.appendChild(renderer.domElement);
-
-    // Controls with responsive settings
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controlsRef.current = controls;
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.screenSpacePanning = true;
-    controls.enabled = true;
-    controls.enablePan = false;
-
-    // Set initial camera limits
-    controls.minDistance = 30;  // Minimum zoom distance
-    controls.maxDistance = 150; // Maximum zoom distance
-    controls.minPolarAngle = 0; // Minimum vertical angle (looking up)
-    controls.maxPolarAngle = Math.PI / 2; // Maximum vertical angle (looking down)
-    controls.minAzimuthAngle = -Math.PI / 2; // Minimum horizontal angle
-    controls.maxAzimuthAngle = Math.PI / 2; // Maximum horizontal angle
-    controls.update();
-
-    // Adjust controls based on screen size
-    if (windowSize.width < 768) {
-      controls.minDistance = 30;
-      controls.maxDistance = 100;
-      controls.maxPolarAngle = Math.PI / 2;
-    } else {
-      controls.minDistance = 30;
-      controls.maxDistance = 150;
-      controls.maxPolarAngle = Math.PI / 2;
-    }
 
     // Raycaster for click detection
     const raycaster = new THREE.Raycaster();
@@ -264,10 +213,11 @@ const Scene = () => {
             }
 
             object.scale.set(0.007, 0.007, 0.007);
-            const prevPosition = characterRef.current.object ? characterRef.current.object.position.clone() : new THREE.Vector3(60, 28, 150);
-            const prevRotation = characterRef.current.object ? characterRef.current.object.rotation.clone() : new THREE.Euler(0, 0, 0);
-            object.position.copy(prevPosition);
-            object.rotation.copy(prevRotation);
+            // Set initial position inside the house
+            const initialPosition = new THREE.Vector3(-18, 28, -20);
+            const initialRotation = new THREE.Euler(0, 0, 0);
+            object.position.copy(initialPosition);
+            object.rotation.copy(initialRotation);
 
             // Apply the PBR textures to all meshes
             object.traverse((child) => {
@@ -320,8 +270,8 @@ const Scene = () => {
       object: null as THREE.Object3D | null,
       mixer: null as THREE.AnimationMixer | null,
       isWalking: false,
-      basePosition: new THREE.Vector3(40, 10, 150),
-      targetPosition: new THREE.Vector3(40, 10, 150),
+      basePosition: new THREE.Vector3(-18, 10, -20), // Updated initial position inside house
+      targetPosition: new THREE.Vector3(-18, 10, -20), // Updated initial position inside house
       walkSpeed: 5,
       runSpeed: 10,
       randomWalkRadius: 15,
@@ -422,6 +372,15 @@ const Scene = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+
+    // Controls
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controlsRef.current = controls;
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.screenSpacePanning = true;
+    controls.enabled = true; // Enable mouse controls
+    controls.enablePan = false; // Disable panning with keyboard
 
     // Add lights
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
@@ -775,15 +734,15 @@ const Scene = () => {
 
       // Define award images array
       const awardImages: ProjectImage[] = [
-        { file: '/portfolio/project1.png', pos: [-99, 50, -20], rotY: Math.PI / 2, name: 'Dean\'s List', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [-99, 40, -20], rotY: Math.PI / 2, name: 'Best Project', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [-99, 30, -20], rotY: Math.PI / 2, name: 'Hackathon Winner', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [-99, 50, -36], rotY: Math.PI / 2, name: 'Research Grant', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [-99, 40, -36], rotY: Math.PI / 2, name: 'Research Grant', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [-99, 30, -36], rotY: Math.PI / 2, name: 'Innovation Award', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [-99, 50, -4], rotY: Math.PI / 2, name: 'Academic Excellence', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [-99, 40, -4], rotY: Math.PI / 2, name: 'Leadership Award', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [-99, 30, -4], rotY: Math.PI / 2, name: 'Community Service', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/award/AWS.png', pos: [-99, 50, -20], rotY: Math.PI / 2, name: 'Dean\'s List', url: 'https://drive.google.com/file/d/1Wtmkccp22zCtWxLVZD-KF5HhmTpRlCf3/view?usp=sharing' },
+        { file: '/award/uprising.png', pos: [-99, 40, -20], rotY: Math.PI / 2, name: 'Best Project', url: 'https://devfolio.co/projects/pawchain-f81e' },
+       // { file: '/portfolio/project1.png', pos: [-99, 30, -20], rotY: Math.PI / 2, name: 'Hackathon Winner', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/award/cure.png', pos: [-99, 50, -36], rotY: Math.PI / 2, name: 'Research Grant', url: 'https://devfolio.co/projects/cure-me-baby-20c7' },
+       { file: '/award/agentic.png', pos: [-99, 40, -36], rotY: Math.PI / 2, name: 'Research Grant', url: 'https://drive.google.com/file/d/116bU9AHUskZ02fFgbL7LC4rZtXtPDxGO/view?usp=sharing' },
+       // { file: '/portfolio/project1.png', pos: [-99, 30, -36], rotY: Math.PI / 2, name: 'Innovation Award', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/award/comptia.png', pos: [-99, 50, -4], rotY: Math.PI / 2, name: 'Academic Excellence', url: 'https://drive.google.com/file/d/1t8QJ3v4nIFyH2zjEWB07DOMvv-WtGeJ3/view?usp=sharing' },
+        { file: '/award/taipei.png', pos: [-99, 40, -4], rotY: Math.PI / 2, name: 'Leadership Award', url: 'https://drive.google.com/file/d/1P-WrnZAcT3bYD1plEIfL_rXq138S12A-/view?usp=sharing' },
+      //  { file: '/portfolio/project1.png', pos: [-99, 30, -4], rotY: Math.PI / 2, name: 'Community Service', url: 'https://eemunportfolio.vercel.app/' },
       ];
 
       // Load and display award images
@@ -803,7 +762,7 @@ const Scene = () => {
       });
 
       // Load and display portfolio/project1.png as a plane in the scene
-      loader.load('/portfolio/project1.png', (texture: THREE.Texture) => {
+      loader.load('/portfolio/mixue.png', (texture: THREE.Texture) => {
         const imgWidth = 15;  // Adjust as needed 
         const imgHeight = 8; // Adjust as needed
         const geometry = new THREE.PlaneGeometry(imgWidth, imgHeight);
@@ -816,14 +775,15 @@ const Scene = () => {
       });
       
       const projectImages: ProjectImage[] = [
-        { file: '/portfolio/project2.png', pos: [36, 50, -60], rotY: -Math.PI / 4, name: 'HackSplit', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project3.png', pos: [36, 40, -60], rotY: -Math.PI / 4, name: 'PawChain', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [36, 30, -60], rotY: -Math.PI / 4, name: 'Graphic Programming', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [48, 50, -48], rotY: -Math.PI / 4, name: 'Java', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [48, 30, -48], rotY: -Math.PI / 4, name: 'Mixue', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [60, 50, -36], rotY: -Math.PI / 4, name: 'TravelConnect', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [60, 40, -36], rotY: -Math.PI / 4, name: 'Recycle_Reward_System', url: 'https://eemunportfolio.vercel.app/' },
-        { file: '/portfolio/project1.png', pos: [60, 30, -36], rotY: -Math.PI / 4, name: 'CureMeBaby', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/project2.png', pos: [36, 50, -60], rotY: -Math.PI / 4, name: 'HackSplit', url: 'https://hacksplit.vercel.app/' },
+        { file: '/portfolio/project1.png', pos: [36, 40, -60], rotY: -Math.PI / 4, name: 'portfolio', url: 'https://eemunportfolio.vercel.app/' },
+        { file: '/portfolio/recycle_reward_system.png', pos: [36, 30, -60], rotY: -Math.PI / 4, name: 'recycle', url: 'https://github.com/Emungithub/recycle_reward_system' },
+        { file: '/portfolio/Pawchain.png', pos: [48, 50, -48], rotY: -Math.PI / 4, name: 'pawchain', url: 'https://pawchain.vercel.app/' },
+        { file: '/portfolio/mixue.png', pos: [48, 40, -48], rotY: -Math.PI / 4, name: 'Mixue', url: 'https://drive.google.com/file/d/18qZvyhJhR0F-6h42dKMl714VQB_Dax-e/view?usp=sharing' },
+        { file: '/portfolio/dsa.jpg', pos: [48, 30, -48], rotY: -Math.PI / 4, name: 'DSA', url: 'https://github.com/Emungithub/DSA' },
+        { file: '/portfolio/EzBattle.png', pos: [60, 50, -36], rotY: -Math.PI / 4, name: 'EzBattle', url: 'https://ez-battle.vercel.app/' },
+        { file: '/portfolio/travel_connect.png', pos: [60, 40, -36], rotY: -Math.PI / 4, name: 'Travel', url: 'https://github.com/Emungithub/travelConnect' },
+        { file: '/portfolio/fundraising.jpg', pos: [60, 30, -36], rotY: -Math.PI / 4, name: 'fundraising', url: 'https://github.com/Emungithub/fundraising_charity' },
       ];
 
       // Only add project images if showProjects is true
@@ -866,13 +826,24 @@ const Scene = () => {
    
     });
 
-    // Camera position
-    camera.position.set(15, 50, 250);
-    camera.lookAt(0, 0, 150);
+    // Camera position - Update initial camera position to be inside the house
+    camera.position.set(-18, 63, -85); // Position camera inside house
+    camera.lookAt(-18, 28, -20); // Look at character's initial position
 
-    // State to track if character is in house
-    let isInHouse = false;
-    let hasTeleportedToCenter = false;
+    // Set initial state for being inside house
+    setIsInInnerBox(true);
+
+    // Set initial camera controls for inside house
+    if (controlsRef.current) {
+      controlsRef.current.target.set(-18, 28, -20);
+      controlsRef.current.minDistance = 30;
+      controlsRef.current.maxDistance = 80;
+      controlsRef.current.minPolarAngle = 0;
+      controlsRef.current.maxPolarAngle = Math.PI / 2;
+      controlsRef.current.minAzimuthAngle = -Math.PI / 2;
+      controlsRef.current.maxAzimuthAngle = Math.PI / 2;
+      controlsRef.current.update();
+    }
 
     // Animation loop
     const clock = new THREE.Clock();
@@ -938,15 +909,12 @@ const Scene = () => {
             controlsRef.current.target.copy(characterRef.current.object.position);
             controlsRef.current.minDistance = 30;
             controlsRef.current.maxDistance = 80;
-            controlsRef.current.minPolarAngle = 0;
-            controlsRef.current.maxPolarAngle = Math.PI / 2;
-            controlsRef.current.minAzimuthAngle = -Math.PI / 2;
-            controlsRef.current.maxAzimuthAngle = Math.PI / 2;
             controlsRef.current.update();
           }
         } else if (!isInHouse) {
           // Normal movement outside house
           characterRef.current.object.position.copy(nextPosition);
+          
           // Update camera position to follow character from behind
           if (characterRef.current.direction.z > 0) { // Moving down (character facing camera)
             const cameraOffset = new THREE.Vector3(0, 35, -65);
@@ -982,15 +950,13 @@ const Scene = () => {
               characterRef.current.object.rotation.y = Math.PI;
             }
           }
-          // Reset camera zoom and angle limits when outside
+          
+          // Reset camera zoom limits when outside
           if (controlsRef.current) {
-            controlsRef.current.minDistance = 30;
-            controlsRef.current.maxDistance = 150;
+            controlsRef.current.minDistance = 0;
+            controlsRef.current.maxDistance = Infinity;
+            controlsRef.current.maxPolarAngle = Math.PI;
             controlsRef.current.minPolarAngle = 0;
-            controlsRef.current.maxPolarAngle = Math.PI / 2;
-            controlsRef.current.minAzimuthAngle = -Math.PI / 2;
-            controlsRef.current.maxAzimuthAngle = Math.PI / 2;
-            controlsRef.current.update(); // Added update here
           }
         }
 
@@ -1112,19 +1078,14 @@ const Scene = () => {
           controlsRef.current.maxDistance = 50;
           controlsRef.current.minPolarAngle = Math.PI / 4;
           controlsRef.current.maxPolarAngle = Math.PI / 2;
-          // Update will be handled by the final controls.update() or if specific immediate effect needed
         }
       } else {
         // Normal camera controls when not chatting
         if (controlsRef.current) {
-          // These limits should be consistent with the "outside house" general limits
-          controlsRef.current.minDistance = 30; 
-          controlsRef.current.maxDistance = 150;
+          controlsRef.current.minDistance = 0;
+          controlsRef.current.maxDistance = Infinity;
           controlsRef.current.minPolarAngle = 0;
-          controlsRef.current.maxPolarAngle = Math.PI / 2; 
-          controlsRef.current.minAzimuthAngle = -Math.PI / 2; // Ensure these are also set if they can vary
-          controlsRef.current.maxAzimuthAngle = Math.PI / 2;   // Ensure these are also set
-          controlsRef.current.update(); // Added update here
+          controlsRef.current.maxPolarAngle = Math.PI;
         }
       }
 
@@ -1136,30 +1097,12 @@ const Scene = () => {
 
     animate();
 
-    // Update handleResize function
+    // Handle window resize
     const handleResize = () => {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-
-      // Update camera
-      camera.aspect = width / height;
+      camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
-
-      // Update renderer
-      renderer.setSize(width, height);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-      // Update controls
-      if (width < 768) {
-        controls.minDistance = 30;
-        controls.maxDistance = 100;
-        controls.maxPolarAngle = Math.PI / 2;
-      } else {
-        controls.minDistance = 30;
-        controls.maxDistance = 150;
-        controls.maxPolarAngle = Math.PI / 2;
-      }
-      controls.update();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(window.devicePixelRatio);
     };
 
     window.addEventListener('resize', handleResize);
@@ -1216,7 +1159,7 @@ const Scene = () => {
         }
       }
     };
-  }, [isMounted, windowSize]); // Add windowSize to dependencies
+  }, [isMounted]);
 
   // Update screen visibility when state changes
   useEffect(() => {
@@ -1355,15 +1298,12 @@ const Scene = () => {
       {isInInnerBox && (
         <div style={{
           position: 'absolute',
-          bottom: windowSize.width < 768 ? '10px' : '20px',
-          right: windowSize.width < 768 ? '10px' : '20px',
-          transform: 'none',
+          bottom: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
           display: 'flex',
-          flexDirection: windowSize.width < 768 ? 'column' : 'column',
-          gap: windowSize.width < 768 ? '10px' : '20px',
-          zIndex: 1000,
-          padding: windowSize.width < 768 ? '10px' : '0',
-          alignItems: 'flex-end'
+          gap: '20px',
+          zIndex: 1000
         }}>
           <button
             onClick={() => {
@@ -1409,14 +1349,13 @@ const Scene = () => {
 
                 // Update controls to target the character
                 controlsRef.current.target.copy(targetPosition);
-                controlsRef.current.minDistance = 30;
-                controlsRef.current.maxDistance = 150;
-                controlsRef.current.maxPolarAngle = Math.PI / 2;
+                controlsRef.current.minDistance = 0;
+                controlsRef.current.maxDistance = Infinity;
                 controlsRef.current.update();
               }
             }}
             style={{
-              padding: windowSize.width < 768 ? '8px 16px' : '10px 20px',
+              padding: '10px 20px',
               backgroundImage: 'url(/frame/button_frame.png)',
               backgroundSize: '100% 100%',
               backgroundRepeat: 'no-repeat',
@@ -1424,10 +1363,10 @@ const Scene = () => {
               border: 'none',
               borderRadius: '5px',
               cursor: 'pointer',
-              fontSize: windowSize.width < 768 ? '14px' : '16px',
+              fontSize: '16px',
               fontWeight: 'bold',
-              width: windowSize.width < 768 ? '120px' : '150px',
-              height: windowSize.width < 768 ? '40px' : '50px',
+              width: '150px',
+              height: '50px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -1520,9 +1459,8 @@ const Scene = () => {
 
                       // Update controls to target the character
                       controlsRef.current.target.copy(charPos);
-                      controlsRef.current.minDistance = 30;
-                      controlsRef.current.maxDistance = 150;
-                      controlsRef.current.maxPolarAngle = Math.PI / 2;
+                      controlsRef.current.minDistance = 0;
+                      controlsRef.current.maxDistance = Infinity;
                       controlsRef.current.update();
                     }
                   }
@@ -1531,7 +1469,7 @@ const Scene = () => {
               });
             }}
             style={{
-              padding: windowSize.width < 768 ? '8px 16px' : '10px 20px',
+              padding: '10px 20px',
               backgroundImage: 'url(/frame/button_frame.png)',
               backgroundSize: '100% 100%',
               backgroundRepeat: 'no-repeat',
@@ -1539,10 +1477,10 @@ const Scene = () => {
               border: 'none',
               borderRadius: '5px',
               cursor: 'pointer',
-              fontSize: windowSize.width < 768 ? '14px' : '16px',
+              fontSize: '16px',
               fontWeight: 'bold',
-              width: windowSize.width < 768 ? '120px' : '150px',
-              height: windowSize.width < 768 ? '40px' : '50px',
+              width: '150px',
+              height: '50px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -1641,9 +1579,8 @@ const Scene = () => {
 
                       // Update controls to target the character
                       controlsRef.current.target.copy(charPos);
-                      controlsRef.current.minDistance = 30;
-                      controlsRef.current.maxDistance = 150;
-                      controlsRef.current.maxPolarAngle = Math.PI / 2;
+                      controlsRef.current.minDistance = 0;
+                      controlsRef.current.maxDistance = Infinity;
                       controlsRef.current.update();
                     }
                   }
@@ -1652,7 +1589,7 @@ const Scene = () => {
               });
             }}
             style={{
-              padding: windowSize.width < 768 ? '8px 16px' : '10px 20px',
+              padding: '10px 20px',
               backgroundImage: 'url(/frame/button_frame.png)',
               backgroundSize: '100% 100%',
               backgroundRepeat: 'no-repeat',
@@ -1660,10 +1597,10 @@ const Scene = () => {
               border: 'none',
               borderRadius: '5px',
               cursor: 'pointer',
-              fontSize: windowSize.width < 768 ? '14px' : '16px',
+              fontSize: '16px',
               fontWeight: 'bold',
-              width: windowSize.width < 768 ? '120px' : '150px',
-              height: windowSize.width < 768 ? '40px' : '50px',
+              width: '150px',
+              height: '50px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -1761,16 +1698,15 @@ const Scene = () => {
 
                     // Update controls to target the character
                     controlsRef.current.target.copy(charPos);
-                    controlsRef.current.minDistance = 30;
-                    controlsRef.current.maxDistance = 150;
-                    controlsRef.current.maxPolarAngle = Math.PI / 2;
+                    controlsRef.current.minDistance = 0;
+                    controlsRef.current.maxDistance = Infinity;
                     controlsRef.current.update();
                   }
                 }
               }
             }}
             style={{
-              padding: windowSize.width < 768 ? '8px 16px' : '10px 20px',
+              padding: '10px 20px',
               backgroundImage: 'url(/frame/button_frame.png)',
               backgroundSize: '100% 100%',
               backgroundRepeat: 'no-repeat',
@@ -1778,10 +1714,10 @@ const Scene = () => {
               border: 'none',
               borderRadius: '5px',
               cursor: 'pointer',
-              fontSize: windowSize.width < 768 ? '14px' : '16px',
+              fontSize: '16px',
               fontWeight: 'bold',
-              width: windowSize.width < 768 ? '120px' : '150px',
-              height: windowSize.width < 768 ? '40px' : '50px',
+              width: '150px',
+              height: '50px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -1790,162 +1726,6 @@ const Scene = () => {
           >
             Awards
           </button>
-
-          {/* Directional Controls */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '5px',
-            marginTop: '20px'
-          }}>
-            {/* Up Button */}
-            <button
-              onMouseDown={() => {
-                if (!characterRef.current.isWalking) {
-                  characterRef.current.isWalking = true;
-                  characterRef.current.direction.z = -1;
-                  if (characterRef.current.object) characterRef.current.object.rotation.y = Math.PI;
-                }
-              }}
-              onMouseUp={() => {
-                characterRef.current.direction.z = 0;
-                if (characterRef.current.direction.x === 0 && characterRef.current.direction.z === 0) {
-                  characterRef.current.isWalking = false;
-                }
-              }}
-              style={{
-                padding: '10px',
-                backgroundImage: 'url(/frame/button_frame.png)',
-                backgroundSize: '100% 100%',
-                backgroundRepeat: 'no-repeat',
-                color: '#d75bbb',
-                border: 'none',
-                borderRadius: '5px',
-                cursor: 'pointer',
-                width: '50px',
-                height: '50px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '20px',
-                fontWeight: 'bold'
-              }}
-            >
-              ↑
-            </button>
-            
-            {/* Middle Row */}
-            <div style={{ display: 'flex', gap: '5px' }}>
-              {/* Left Button */}
-              <button
-                onMouseDown={() => {
-                  if (!characterRef.current.isWalking) {
-                    characterRef.current.isWalking = true;
-                    characterRef.current.direction.x = -1;
-                    if (characterRef.current.object) characterRef.current.object.rotation.y = -Math.PI / 2;
-                  }
-                }}
-                onMouseUp={() => {
-                  characterRef.current.direction.x = 0;
-                  if (characterRef.current.direction.x === 0 && characterRef.current.direction.z === 0) {
-                    characterRef.current.isWalking = false;
-                  }
-                }}
-                style={{
-                  padding: '10px',
-                  backgroundImage: 'url(/frame/button_frame.png)',
-                  backgroundSize: '100% 100%',
-                  backgroundRepeat: 'no-repeat',
-                  color: '#d75bbb',
-                  border: 'none',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  width: '50px',
-                  height: '50px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '20px',
-                  fontWeight: 'bold'
-                }}
-              >
-                ←
-              </button>
-
-              {/* Down Button */}
-              <button
-                onMouseDown={() => {
-                  if (!characterRef.current.isWalking) {
-                    characterRef.current.isWalking = true;
-                    characterRef.current.direction.z = 1;
-                    if (characterRef.current.object) characterRef.current.object.rotation.y = 0;
-                  }
-                }}
-                onMouseUp={() => {
-                  characterRef.current.direction.z = 0;
-                  if (characterRef.current.direction.x === 0 && characterRef.current.direction.z === 0) {
-                    characterRef.current.isWalking = false;
-                  }
-                }}
-                style={{
-                  padding: '10px',
-                  backgroundImage: 'url(/frame/button_frame.png)',
-                  backgroundSize: '100% 100%',
-                  backgroundRepeat: 'no-repeat',
-                  color: '#d75bbb',
-                  border: 'none',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  width: '50px',
-                  height: '50px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '20px',
-                  fontWeight: 'bold'
-                }}
-              >
-                ↓
-              </button>
-
-              {/* Right Button */}
-              <button
-                onMouseDown={() => {
-                  if (!characterRef.current.isWalking) {
-                    characterRef.current.isWalking = true;
-                    characterRef.current.direction.x = 1;
-                    if (characterRef.current.object) characterRef.current.object.rotation.y = Math.PI / 2;
-                  }
-                }}
-                onMouseUp={() => {
-                  characterRef.current.direction.x = 0;
-                  if (characterRef.current.direction.x === 0 && characterRef.current.direction.z === 0) {
-                    characterRef.current.isWalking = false;
-                  }
-                }}
-                style={{
-                  padding: '10px',
-                  backgroundImage: 'url(/frame/button_frame.png)',
-                  backgroundSize: '100% 100%',
-                  backgroundRepeat: 'no-repeat',
-                  color: '#d75bbb',
-                  border: 'none',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  width: '50px',
-                  height: '50px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '20px',
-                  fontWeight: 'bold'
-                }}
-              >
-                →
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </div>
